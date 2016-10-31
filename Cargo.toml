@@ -4,6 +4,7 @@ name = "rustytwit"
 version = "0.0.1"
 
 [dependencies]
+chrono = "0.2.25"
 curl = "0.2"
 egg-mode = "0.6.0"
 env_logger = "*"

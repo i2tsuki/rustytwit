@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate curl;
 extern crate crypto;
 extern crate egg_mode;
@@ -13,12 +14,9 @@ use gtk::{Orientation, RevealerTransitionType};
 use gtk::{Image, Label};
 
 use rustc_serialize::Decodable;
-use rustc_serialize::json::{self, Json};
 
 use std::clone::Clone;
-use std::rc::Rc;
 
-// error
 // TimeilineError
 #[derive(Debug)]
 pub enum TimelineError {
@@ -71,7 +69,7 @@ impl From<::utils::UtilsError> for CreateWidgetError {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, RustcEncodable, RustcDecodable)]
 pub struct TimelineRow {
     pub tweet: Tweet,
     pub unread: bool,
@@ -357,7 +355,7 @@ pub fn get_home_timeline(consumer_token: &egg_mode::Token, access_token: &egg_mo
         timeline.push(
             TimelineRow {
                 tweet: Tweet {
-                    created_at: format!("{}", status.created_at),
+                    created_at: format!("{}", status.created_at.with_timezone(&chrono::Local)),
                     id: status.id.clone(),
                     text: status.text.clone(),
                     user: User {

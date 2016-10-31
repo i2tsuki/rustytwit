@@ -564,13 +564,13 @@ pub fn main() {
                     Ok(guard) => guard,
                     Err(poisoned) => poisoned.into_inner(),
                 };
-                // match cache::write(cache_home, &guard) {
-                //     Ok(_) => (),
-                //     Err(err) => {
-                //         error!("{:?}", err);
-                //         panic!("{:?}", err)
-                //     },
-                // }
+                match cache::write(cache_home, &guard) {
+                    Ok(_) => (),
+                    Err(err) => {
+                        error!("{:?}", err);
+                        panic!("{:?}", err)
+                    },
+                }
             }
 
             Inhibit(false)

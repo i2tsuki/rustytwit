@@ -36,13 +36,13 @@ impl From<json::DecoderError> for CacheError {
     }    
 }
 
-// pub fn write(filename: path::PathBuf, timeline: &Vec<::timeline::home::TimelineRow>) -> Result<(), CacheError> {
-//     let mut file = try!(File::create(filename.clone()));
-//     let json_str = try!(json::encode(timeline));
-//     try!(file.write_all(json_str.as_bytes()));
-//     info!("wrote cache to {:?}", filename);
-//     Ok(())
-// }
+pub fn write(filename: path::PathBuf, timeline: &Vec<::timeline::home::TimelineRow>) -> Result<(), CacheError> {
+    let mut file = try!(File::create(filename.clone()));
+    let json_str = try!(json::encode(timeline));
+    try!(file.write_all(json_str.as_bytes()));
+    info!("wrote cache to {:?}", filename);
+    Ok(())
+}
 
 // pub fn load(filename: path::PathBuf) -> Result<Vec<::timeline::home::TimelineRow>, CacheError> {
 //     let mut file = match File::open(filename) {
