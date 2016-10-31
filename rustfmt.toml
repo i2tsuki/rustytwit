@@ -1,0 +1,14 @@
+verbose = true
+max_width = 120
+tab_spaces = 4
+newline_style = "Unix"
+fn_single_line = false
+struct_trailing_comma = "Always"
+struct_lit_trailing_comma = "Always"
+enum_trailing_comma = true
+reorder_imports = true
+force_format_strings = true
+hard_tabs = false
+normalise_comments = true
+match_block_trailing_comma = true
+match_wildcard_trailing_comma = true
