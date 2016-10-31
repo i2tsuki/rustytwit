@@ -2,7 +2,7 @@ extern crate egg_mode;
 
 use std::io;
 
-// error
+// AuthError
 #[derive(Debug)]
 pub enum AuthError {
     Io(io::Error),
@@ -32,6 +32,7 @@ pub fn authorize(consumer_token: egg_mode::Token) -> Result<egg_mode::Token<'sta
     try!(io::stdin().read_line(&mut input));
     let pin = input.trim().to_string();
 
-    let (access_token, user_id, username) = try!(egg_mode::access_token(&consumer_token, &request_token, pin));
+    // There are access_token, user_id, username receiving here
+    let (access_token, _, _) = try!(egg_mode::access_token(&consumer_token, &request_token, pin));
     return Ok(access_token)
 }
