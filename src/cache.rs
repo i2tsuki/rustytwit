@@ -10,7 +10,7 @@ use std::io;
 use std::io::prelude::*;
 use std::path;
 
-// error
+// CacheError
 #[derive(Debug)]
 pub enum CacheError {
     Io(io::Error),
@@ -37,9 +37,7 @@ impl From<json::DecoderError> for CacheError {
 }
 
 pub fn write(filename: path::PathBuf, timeline: &Vec<::timeline::home::TimelineRow>) -> Result<(), CacheError> {
-    let mut file = try!(File::create(filename.clone()));
-    let json_str = try!(json::encode(timeline));
-    try!(file.write_all(json_str.as_bytes()));
+    try!(File::create(filename.clone()) ? .write_all(json::encode(timeline) ? .as_bytes()));
     info!("wrote cache to {:?}", filename);
     Ok(())
 }
@@ -55,6 +53,5 @@ pub fn load(filename: path::PathBuf) -> Result<Vec<::timeline::home::TimelineRow
 
     let mut body = String::new();
     try!(file.read_to_string(&mut body));
-    let home = try!(json::decode(body.as_str()).map_err(CacheError::JsonDecoder));
-    Ok(home)
+    Ok(try!(json::decode(body.as_str()).map_err(CacheError::JsonDecoder)))
 }

@@ -103,7 +103,6 @@ pub fn main() {
             panic!("{:?}", err)
         },
     };
-    let home_timeline: Vec<timeline::home::TimelineRow> = vec![];
     let home_timeline = Arc::new(Mutex::new(home_timeline));
 
     // variable initialization
@@ -235,17 +234,17 @@ pub fn main() {
 
         let switch_url = Switch::new();
         switch_url.connect_state_set(move |switch, flag| {
-            // let mut guard = match home.lock() {
-            //     Ok(guard) => guard,
-            //     Err(poisoned) => poisoned.into_inner(),
-            // };
-            // debug!("switch_unread is {}", switch.get_active());
-            // let timeline = guard.deref_mut();
-            // timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
-            // match timeline::home::update_home_timeline(&listbox, timeline, false, flag) {
-            //     Ok(_) => (),
-            //     Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
-            // }
+            let mut guard = match home.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => poisoned.into_inner(),
+            };
+            debug!("switch_unread is {}", switch.get_active());
+            let timeline = guard.deref_mut();
+            timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
+            match timeline::home::update_home_timeline(&listbox, timeline, false, flag) {
+                Ok(_) => (),
+                Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
+            }
             debug!("{}", flag);
             return Inhibit(false);
         });
