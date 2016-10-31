@@ -34,5 +34,5 @@ pub fn authorize(consumer_token: egg_mode::Token) -> Result<egg_mode::Token<'sta
 
     // There are access_token, user_id, username receiving here
     let (access_token, _, _) = try!(egg_mode::access_token(&consumer_token, &request_token, pin));
-    return Ok(access_token)
+    Ok(access_token)
 }

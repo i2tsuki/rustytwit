@@ -14,22 +14,21 @@ extern crate log;
 extern crate env_logger;
 
 use getopts::Options;
+use gtk::{Box, Image, Label, ListBox, Paned, Revealer};
+use gtk::{ScrolledWindow, Window, WindowType};
+use gtk::{ToolButton, ToolItem};
+use gtk::Orientation;
+use gtk::Switch;
+
+// import gtk
+use gtk::prelude::*;
 
 use std::{env, fs};
-use std::borrow::Cow;
-use std::ops::{DerefMut};
+use std::ops::DerefMut;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
 use std::thread;
 use std::time;
-
-// import gtk
-use gtk::prelude::*;
-use gtk::{ToolButton, ToolItem};
-use gtk::Switch;
-use gtk::{Box, Image, Label, ListBox, Paned, Revealer};
-use gtk::Orientation;
-use gtk::{ScrolledWindow, Window, WindowType};
 
 // module import
 mod auth;
@@ -47,19 +46,22 @@ pub fn main() {
     opts.optflag("h", "help", "Show this usage message.");
 
     let matches = match opts.parse(&args[1..]) {
-        Ok(m)  => m,
+        Ok(m) => m,
         Err(err) => panic!(err.to_string()),
     };
 
     if matches.opt_present("h") {
         // usage(opts);
         return;
-    }    
-    
+    }
+
     // logger initialization
     match env_logger::init() {
         Ok(_) => (),
-        Err(err) => { error!("{:?}", err); panic!("{:?}", err); },
+        Err(err) => {
+            error!("{:?}", err);
+            panic!("{:?}", err);
+        },
     }
 
     // thread channel setup
@@ -68,32 +70,40 @@ pub fn main() {
     // config file initialization
     let home_dir = match env::home_dir() {
         Some(home_dir) => home_dir,
-        None => { error!("home directory is not set");
-                  panic!("home directory is not set") },
+        None => {
+            error!("home directory is not set");
+            panic!("home directory is not set")
+        },
     };
-    
+
     let cache_dir = home_dir.clone().join(vars::CACHE_DIR).join("rustytwit");
     let cache_image_dir = cache_dir.clone().join("image");
     let config_dir = home_dir.clone().join(vars::CONFIG_DIR).join("rustytwit");
     {
         fs::create_dir_all(cache_dir.clone()).ok();
-        fs::create_dir_all(cache_image_dir.clone()).ok();        
+        fs::create_dir_all(cache_image_dir.clone()).ok();
         fs::create_dir_all(config_dir.clone()).ok();
     }
     let filename = config_dir.clone().join(vars::CONFIG);
 
     let mut config = match config::Config::new(&filename) {
         Ok(config) => Arc::new(config),
-        Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
+        Err(err) => {
+            error!("{:?}", err);
+            panic!("{:?}", err)
+        },
     };
 
     // load timeline cache
     let cache_home_timeline = cache_dir.clone().join("home_timeline.json");
     let home_timeline: Vec<timeline::home::TimelineRow> = match cache::load(cache_home_timeline) {
         Ok(home) => home,
-        Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
+        Err(err) => {
+            error!("{:?}", err);
+            panic!("{:?}", err)
+        },
     };
-    let home_timeline: Vec<timeline::home::TimelineRow> = vec!();
+    let home_timeline: Vec<timeline::home::TimelineRow> = vec![];
     let home_timeline = Arc::new(Mutex::new(home_timeline));
 
     // variable initialization
@@ -104,7 +114,10 @@ pub fn main() {
         let consumer_token = egg_mode::Token::new(::vars::CONSUMER_KEY, ::vars::CONSUMER_KEY_SECRET);
         let access = match auth::authorize(consumer_token) {
             Ok(access) => access,
-            Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
+            Err(err) => {
+                error!("{:?}", err);
+                panic!("{:?}", err)
+            },
         };
         Arc::make_mut(&mut config).toml.access_key.key = access.key.into_owned();
         Arc::make_mut(&mut config).toml.access_key.secret = access.secret.into_owned();
@@ -202,7 +215,7 @@ pub fn main() {
     let refresh_button_icon = Image::new_from_icon_name("gtk-refresh", 0);
     let refresh_button_label = "refresh";
     let refresh_button = ToolButton::new(Some(&refresh_button_icon), Some(refresh_button_label));
-    toolbar.insert(&refresh_button, 0);    
+    toolbar.insert(&refresh_button, 0);
 
     {
         let separator_spacer = gtk::SeparatorToolItem::new();
@@ -221,11 +234,11 @@ pub fn main() {
         let vbox = Box::new(Orientation::Vertical, 0);
 
         let switch_url = Switch::new();
-        switch_url.connect_state_set( move | switch, flag | {
+        switch_url.connect_state_set(move |switch, flag| {
             // let mut guard = match home.lock() {
             //     Ok(guard) => guard,
             //     Err(poisoned) => poisoned.into_inner(),
-            // };            
+            // };
             // debug!("switch_unread is {}", switch.get_active());
             // let timeline = guard.deref_mut();
             // timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
@@ -234,7 +247,7 @@ pub fn main() {
             //     Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
             // }
             debug!("{}", flag);
-            return Inhibit(false)
+            return Inhibit(false);
         });
         vbox.pack_start(&switch_url, true, true, 0);
 
@@ -245,37 +258,40 @@ pub fn main() {
         toolitem_url.add(&vbox);
     }
     toolbar.insert(&toolitem_url, 2);
-    
+
     {
         let separator_spacer = gtk::SeparatorToolItem::new();
         separator_spacer.set_expand(false);
         separator_spacer.set_draw(false);
         toolbar.insert(&separator_spacer, 3);
     }
-    
+
     // definition unread filter
     let toolitem_unread = ToolItem::new();
-    {           
+    {
         let listbox = listbox.clone();
         let config = config.clone();
         let home = home_timeline.clone();
 
         let vbox = Box::new(Orientation::Vertical, 0);
-        
+
         let switch_unread = Switch::new();
-        switch_unread.connect_state_set( move | switch, flag | {
+        switch_unread.connect_state_set(move |switch, flag| {
             let mut guard = match home.lock() {
                 Ok(guard) => guard,
                 Err(poisoned) => poisoned.into_inner(),
-            };            
+            };
             debug!("switch_unread is {}", switch.get_active());
             let timeline = guard.deref_mut();
             timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
             match timeline::home::update_home_timeline(&listbox, timeline, false, flag) {
                 Ok(_) => (),
-                Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
+                Err(err) => {
+                    error!("{:?}", err);
+                    panic!("{:?}", err)
+                },
             }
-            return Inhibit(false)
+            return Inhibit(false);
         });
         vbox.pack_start(&switch_unread, true, true, 0);
 
@@ -284,24 +300,24 @@ pub fn main() {
         vbox.pack_start(&label_text, true, true, 1);
         toolitem_unread.add(&vbox);
     }
-    toolbar.insert(&toolitem_unread, 4);    
-    
+    toolbar.insert(&toolitem_unread, 4);
+
     let separator_bar = gtk::SeparatorToolItem::new();
     separator_bar.set_draw(true);
     toolbar.insert(&separator_bar, 5);
-    
+
     let pref_button_icon = Image::new_from_icon_name("gtk-preferences", 1);
     let pref_button_label = "preferences";
     let pref_button = ToolButton::new(Some(&pref_button_icon), Some(pref_button_label));
     toolbar.insert(&pref_button, 6);
-    
+
     // window setup
     window.add(&paned);
     window.show_all();
     {
         let config = config.clone();
         let listbox = listbox.clone();
-        
+
         let mut guard = match home_timeline.lock() {
             Ok(guard) => guard,
             Err(poisoned) => poisoned.into_inner(),
@@ -310,23 +326,26 @@ pub fn main() {
         timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
         match timeline::home::update_home_timeline(&listbox, timeline, false, false) {
             Ok(_) => (),
-            Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
+            Err(err) => {
+                error!("{:?}", err);
+                panic!("{:?}", err)
+            },
         }
     }
 
     // event definition, when refresh_button is clicked
     {
         let listbox = listbox.clone();
-        
+
         let config = config.clone();
 
         let consumer_token = consumer_token.clone();
-        let access_token = access_token.clone();       
-        
+        let access_token = access_token.clone();
+
         let home = home_timeline.clone();
 
         refresh_button.connect_clicked(move |_| {
-            let ref consumer_token = *consumer_token.as_ref();            
+            let ref consumer_token = *consumer_token.as_ref();
             let ref access_token = *access_token.as_ref();
             // let mut param = ParamList::new();
             // param.insert(Cow::Owned("count".to_string()),
@@ -336,7 +355,7 @@ pub fn main() {
             let tweets = match timeline::home::get_home_timeline(consumer_token, access_token) {
                 Ok(tweets) => tweets,
                 Err(_) => return,
-            };            
+            };
             match tweets.first() {
                 Some(row) => config.toml.home_timeline.last_update_id.set(row.tweet.id),
                 None => (),
@@ -358,8 +377,11 @@ pub fn main() {
             }
             match timeline::home::update_home_timeline(&listbox, &tweets, true, false) {
                 Ok(_) => (),
-                Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
-            }            
+                Err(err) => {
+                    error!("{:?}", err);
+                    panic!("{:?}", err)
+                },
+            }
         });
     }
 
@@ -367,7 +389,7 @@ pub fn main() {
     {
         let home_timeline = home_timeline.clone();
         let config = config.clone();
-        
+
         listbox.connect_row_selected(move |_, listboxrow| {
             let revealer = match listboxrow.clone() {
                 Some(listboxrow) => {
@@ -422,7 +444,10 @@ pub fn main() {
                 Some(id_str) => {
                     match i64::from_str_radix(&id_str, 10) {
                         Ok(id) => id,
-                        Err(err) => { error!("{}", err); return },
+                        Err(err) => {
+                            error!("{}", err);
+                            return;
+                        },
                     }
                 },
                 None => return,
@@ -433,32 +458,38 @@ pub fn main() {
                     Some(listboxrow) => listboxrow,
                     None => return,
                 };
-                
+
                 let mut guard = match home_timeline.lock() {
                     Ok(guard) => guard,
                     Err(poisoned) => poisoned.into_inner(),
                 };
                 let timeline = guard.deref_mut();
 
-                for row in timeline {       
+                for row in timeline {
                     if row.tweet.id == id {
                         row.unread = false;
                         // expand selected listboxrow
-                        listboxrow.remove(&revealer);                        
+                        listboxrow.remove(&revealer);
                         let revealer = match timeline::home::create_expanded_revealer(row.clone()) {
                             Ok(revealer) => revealer,
-                            Err(err) => { error!("{:?}", err); return }, 
+                            Err(err) => {
+                                error!("{:?}", err);
+                                return;
+                            }, 
                         };
                         listboxrow.add(&revealer);
                         match timeline::home::show_listboxrow(&listboxrow) {
                             Ok(_) => (),
-                            Err(err) => { error!("{:?}", err); return }, 
+                            Err(err) => {
+                                error!("{:?}", err);
+                                return;
+                            }, 
                         }
-                        break
+                        break;
                     }
                 }
-                config.toml.home_timeline.last_read_id.set(id);                
-            }            
+                config.toml.home_timeline.last_read_id.set(id);
+            }
         });
     }
 
@@ -475,20 +506,20 @@ pub fn main() {
 
             loop {
                 let retry_secs = 60;
-                let duration = 600;                
+                let duration = 600;
                 // let mut param = ParamList::new();
                 // param.insert(Cow::Owned("count".to_string()),
                 //              Cow::Owned(format!("{}", config.toml.home_timeline.limits.get())));
                 // param.insert(Cow::Owned("since_id".to_string()),
                 //              Cow::Owned(format!("{}", config.toml.home_timeline.last_update_id.get())));
-                
+
                 let timeline = match timeline::home::get_home_timeline(consumer_token, access_token) {
                     Ok(timeline) => timeline,
                     Err(err) => {
                         error!("{:?}", err);
                         error!("try later, after {} seconds", retry_secs);
-                        thread::sleep(time::Duration::from_secs(retry_secs));  
-                        continue
+                        thread::sleep(time::Duration::from_secs(retry_secs));
+                        continue;
                     },
                 };
                 info!("thread: get_home_timeline()");
@@ -498,10 +529,15 @@ pub fn main() {
                         config.toml.home_timeline.last_update_id.set(id);
                         match tx.send(timeline.clone()) {
                             Ok(_) => (),
-                            Err(err) => { error!("{:?}", err); panic!("{:?}", err); },
+                            Err(err) => {
+                                error!("{:?}", err);
+                                panic!("{:?}", err);
+                            },
                         }
                     },
-                    None => { debug!("thread: timeline is None"); },
+                    None => {
+                        debug!("thread: timeline is None");
+                    },
                 };
                 thread::sleep(time::Duration::from_secs(duration));
             }
@@ -511,9 +547,9 @@ pub fn main() {
         // receive signal from threads, update gtk widgets thread
         let config = config.clone();
         let home = home_timeline.clone();
-        
+
         let listbox = listbox.clone();
-        
+
         let refresh_timeline = move || {
             debug!("pooling try to receive from channel");
             let tweets = match rx.try_recv() {
@@ -531,7 +567,7 @@ pub fn main() {
                     index += 1;
                 }
                 let mut timeline = guard.deref_mut();
-                timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());            
+                timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
             }
             let _ = timeline::home::update_home_timeline(&listbox, &tweets, true, false);
 
@@ -540,7 +576,7 @@ pub fn main() {
 
         gtk::timeout_add_seconds(10, refresh_timeline);
     }
-       
+
     // exit progress, when program exit
     {
         let config = config.clone();

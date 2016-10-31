@@ -3,12 +3,12 @@ extern crate gdk_pixbuf_sys;
 extern crate glib;
 extern crate rustc_serialize;
 
+
+use rustc_serialize::json;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use std::path;
-
-use rustc_serialize::json;
 
 // error
 #[derive(Debug)]
@@ -33,7 +33,7 @@ impl From<json::EncoderError> for CacheError {
 impl From<json::DecoderError> for CacheError {
     fn from(err: json::DecoderError) -> CacheError {
         CacheError::JsonDecoder(err)
-    }    
+    }
 }
 
 pub fn write(filename: path::PathBuf, timeline: &Vec<::timeline::home::TimelineRow>) -> Result<(), CacheError> {

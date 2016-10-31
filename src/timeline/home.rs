@@ -5,12 +5,12 @@ extern crate egg_mode;
 extern crate rustc_serialize;
 extern crate time;
 
-use regex;
 
 use gtk;
-use gtk::prelude::*;
-use gtk::{Orientation, RevealerTransitionType};
 use gtk::{Image, Label};
+use gtk::{Orientation, RevealerTransitionType};
+use gtk::prelude::*;
+use regex;
 
 use std::clone::Clone;
 
@@ -77,8 +77,7 @@ pub struct Tweet {
     pub created_at: String,
     pub id: i64,
     pub text: String,
-    pub user: User,
-    // pub retweeted_status: RetweetedStatus,
+    pub user: User, // pub retweeted_status: RetweetedStatus,
 }
 
 #[derive(Clone, Debug, RustcEncodable, RustcDecodable)]
@@ -101,19 +100,23 @@ pub fn fixup_home(timeline: &mut Vec<TimelineRow>, limit: usize) {
     }
 }
 
-pub fn update_home_timeline(listbox: &gtk::ListBox, timeline: &Vec<TimelineRow>, add: bool, unread_filter: bool) -> Result<(), TimelineError> {
+pub fn update_home_timeline(listbox: &gtk::ListBox,
+                            timeline: &Vec<TimelineRow>,
+                            add: bool,
+                            unread_filter: bool)
+                            -> Result<(), TimelineError> {
     // when add flag is false, refresh all listboxrow
     if !add {
         for widget in listbox.get_children() {
             listbox.remove(&widget);
         }
     }
-    
+
     let mute_user = vec!["syuu1228", "kakkun61", "methane"];
     let mut index: i32 = 0;
 
     let last_mute = try!(mute_user.last().ok_or("".to_owned())).to_string();
-    
+
     for row in timeline {
         if unread_filter == true && row.unread == false {
             break;
@@ -124,39 +127,39 @@ pub fn update_home_timeline(listbox: &gtk::ListBox, timeline: &Vec<TimelineRow>,
             } else if mute == last_mute {
                 let listboxrow = gtk::ListBoxRow::new();
                 let revealer = try!(create_revealer(row.clone()));
-                listboxrow.add(&revealer);                
+                listboxrow.add(&revealer);
                 listbox.insert(&listboxrow, index);
 
-                index += 1;                
+                index += 1;
                 try!(show_listboxrow(&listboxrow));
             }
         }
-    }    
+    }
     return Ok(());
 }
 
 pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetError> {
-    let create_box_header = move | tweet: Tweet | -> Result<gtk::Box, CreateWidgetError> {
+    let create_box_header = move |tweet: Tweet| -> Result<gtk::Box, CreateWidgetError> {
         let user_label = Label::new(None);
-        let user = format!("<b>@{}:</b>(archived)",tweet.user.screen_name);
+        let user = format!("<b>@{}:</b>(archived)", tweet.user.screen_name);
         user_label.set_text(user.as_ref());
         user_label.set_selectable(true);
         user_label.set_use_markup(true);
         user_label.set_xalign(0.0);
-            
+
         let created_at_label = Label::new(None);
         created_at_label.set_text(tweet.created_at.as_ref());
         let box_header = gtk::Box::new(Orientation::Horizontal, 2);
         box_header.pack_start(&user_label, true, true, 0);
         box_header.pack_start(&created_at_label, false, false, 0);
 
-        return Ok(box_header)
+        return Ok(box_header);
     };
 
-    let create_box_label = move | tweet: Tweet | -> Result<gtk::Box, CreateWidgetError> {
+    let create_box_label = move |tweet: Tweet| -> Result<gtk::Box, CreateWidgetError> {
         let box_header = try!(create_box_header(tweet.clone()));
 
-        let body = try!(::timeline::utils::format_tweet_body(&tweet.text));        
+        let body = try!(::timeline::utils::format_tweet_body(&tweet.text));
         let label_body = Label::new(None);
         label_body.set_text(body.as_ref());
         label_body.set_selectable(true);
@@ -164,18 +167,18 @@ pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetEr
         label_body.set_line_wrap(true);
         label_body.set_xalign(0.0);
 
-        let box_label = gtk::Box::new(Orientation::Vertical, 2);        
+        let box_label = gtk::Box::new(Orientation::Vertical, 2);
         box_label.pack_start(&box_header, false, false, 0);
         box_label.pack_start(&label_body, true, true, 0);
 
-        return Ok(box_label)
+        return Ok(box_label);
     };
 
-    let create_box_revealer = move | row: TimelineRow | -> Result<gtk::Box, CreateWidgetError> {
+    let create_box_revealer = move |row: TimelineRow| -> Result<gtk::Box, CreateWidgetError> {
         let profile_image_filename = try!(::utils::get_profile_image(&row.tweet.user.profile_image_url));
         let image_profile_image = Image::new_from_file(profile_image_filename);
         image_profile_image.set_padding(4, 4);
-        
+
         // let box_label = try!(create_box_label(row.tweet.clone()));
         let box_label = try!(create_box_label(row.tweet.clone()));
 
@@ -184,11 +187,11 @@ pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetEr
             image_unread.clear();
             image_unread.set_padding(8, 8);
         };
-        
+
         let label_null = Label::new(None);
         let null = "   ";
         label_null.set_text(null.as_ref());
-        
+
         let label_id = Label::new(None);
         let id = format!("{}", row.tweet.id);
         label_id.set_text(id.as_ref());
@@ -206,12 +209,12 @@ pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetEr
         box_revealer.pack_start(&label_null, false, false, 0);
         box_revealer.pack_start(&label_id, false, false, 0);
         box_revealer.pack_start(&label_profile_image, false, false, 0);
-        
-        return Ok(box_revealer)
+
+        return Ok(box_revealer);
     };
 
-    let create_revealer = move | row: TimelineRow | -> Result<gtk::Revealer, CreateWidgetError> {
-        // FixMe: revealer is not available        
+    let create_revealer = move |row: TimelineRow| -> Result<gtk::Revealer, CreateWidgetError> {
+        // FixMe: revealer is not available
         let revealer = gtk::Revealer::new();
         revealer.set_transition_type(RevealerTransitionType::Crossfade);
         revealer.set_transition_duration(15000);
@@ -220,11 +223,11 @@ pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetEr
         let box_revealer = try!(create_box_revealer(row));
         revealer.add(&box_revealer);
 
-        return Ok(revealer)
+        return Ok(revealer);
     };
 
     let revealer = try!(create_revealer(row.clone()));
-    
+
     // ToDo: display when event_box clicked
     // let popover = Popover::new(Some(&event_box));
     // let popover_button = gtk::Button::new_with_label("hogehoge");
@@ -233,14 +236,14 @@ pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetEr
 }
 
 pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetError> {
-    let create_expanded_box_header = move | tweet: Tweet | -> Result<gtk::Box, CreateWidgetError> {
+    let create_expanded_box_header = move |tweet: Tweet| -> Result<gtk::Box, CreateWidgetError> {
         let user_label = Label::new(None);
-        let user = format!("<b>@{}:</b>",tweet.user.screen_name);
+        let user = format!("<b>@{}:</b>", tweet.user.screen_name);
         user_label.set_text(user.as_ref());
         user_label.set_selectable(true);
         user_label.set_use_markup(true);
         user_label.set_xalign(0.0);
-            
+
         let created_at_label = Label::new(None);
         created_at_label.set_text(tweet.created_at.as_ref());
 
@@ -248,13 +251,13 @@ pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, Creat
         box_header.pack_start(&user_label, true, true, 0);
         box_header.pack_start(&created_at_label, false, false, 0);
 
-        return Ok(box_header)
+        return Ok(box_header);
     };
 
-    let create_expanded_box_label = move | tweet: Tweet | -> Result<gtk::Box, CreateWidgetError> {
+    let create_expanded_box_label = move |tweet: Tweet| -> Result<gtk::Box, CreateWidgetError> {
         let box_header = try!(create_expanded_box_header(tweet.clone()));
 
-        let body = try!(::timeline::utils::format_tweet_body(&tweet.text));        
+        let body = try!(::timeline::utils::format_tweet_body(&tweet.text));
         let label_body = Label::new(None);
         label_body.set_text(body.as_ref());
         label_body.set_selectable(true);
@@ -262,40 +265,40 @@ pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, Creat
         label_body.set_line_wrap(true);
         label_body.set_xalign(0.0);
 
-        let box_label = gtk::Box::new(Orientation::Vertical, 2);        
+        let box_label = gtk::Box::new(Orientation::Vertical, 2);
         box_label.pack_start(&box_header, false, false, 0);
         box_label.pack_start(&label_body, true, true, 0);
 
-        return Ok(box_label)
+        return Ok(box_label);
     };
 
-    let create_expanded_box_revealer = move | row: TimelineRow | ->Result<gtk::Box, CreateWidgetError> {
+    let create_expanded_box_revealer = move |row: TimelineRow| -> Result<gtk::Box, CreateWidgetError> {
         let profile_image_filename = try!(::utils::get_profile_image(&row.tweet.user.profile_image_url));
         let image_profile_image = Image::new_from_file(profile_image_filename);
         image_profile_image.set_padding(4, 4);
-        
+
         let box_label = try!(create_expanded_box_label(row.tweet.clone()));
-        
+
         let image_unread = Image::new_from_icon_name("gtk-media-record", 1);
         if !row.unread {
             image_unread.clear();
             image_unread.set_padding(8, 8);
-        };            
-        
+        };
+
         let label_null = Label::new(None);
         let null = "   ";
         label_null.set_text(null.as_ref());
-        
+
         let label_id = Label::new(None);
         let id = format!("{}", row.tweet.id);
         label_id.set_text(id.as_ref());
         label_id.set_visible(false);
-        
+
         let label_profile_image = Label::new(None);
         let profile_image_url = format!("{}", row.tweet.user.profile_image_url);
         label_profile_image.set_text(profile_image_url.as_ref());
         label_profile_image.set_visible(false);
-        
+
         let box_revealer = gtk::Box::new(Orientation::Horizontal, 2);
         box_revealer.pack_start(&image_profile_image, false, false, 0);
         box_revealer.pack_start(&box_label, true, true, 0);
@@ -303,12 +306,12 @@ pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, Creat
         box_revealer.pack_start(&label_null, false, false, 0);
         box_revealer.pack_start(&label_id, false, false, 0);
         box_revealer.pack_start(&label_profile_image, false, false, 0);
-    
-        return Ok(box_revealer)
+
+        return Ok(box_revealer);
     };
 
-    let create_expanded_revealer = move | row: TimelineRow | -> Result<gtk::Revealer, CreateWidgetError> {
-        // FixMe: revealer is not available        
+    let create_expanded_revealer = move |row: TimelineRow| -> Result<gtk::Revealer, CreateWidgetError> {
+        // FixMe: revealer is not available
         let revealer = gtk::Revealer::new();
         revealer.set_transition_type(RevealerTransitionType::Crossfade);
         revealer.set_transition_duration(3000);
@@ -317,11 +320,11 @@ pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, Creat
         let box_revealer = try!(create_expanded_box_revealer(row));
         revealer.add(&box_revealer);
 
-        return Ok(revealer)
+        return Ok(revealer);
     };
 
     let revealer = try!(create_expanded_revealer(row.clone()));
-    
+
     // ToDo: display when event_box clicked
     // let popover = Popover::new(Some(&event_box));
     // let popover_button = gtk::Button::new_with_label("hogehoge");
@@ -339,31 +342,30 @@ pub fn show_listboxrow(listboxrow: &gtk::ListBoxRow) -> Result<(), gtk::Widget> 
     Ok(())
 }
 
-pub fn get_home_timeline(consumer_token: &egg_mode::Token, access_token: &egg_mode::Token) -> Result<Vec<TimelineRow>, egg_mode::error::Error> {
+pub fn get_home_timeline(consumer_token: &egg_mode::Token,
+                         access_token: &egg_mode::Token)
+                         -> Result<Vec<TimelineRow>, egg_mode::error::Error> {
     let mut timeline: Vec<TimelineRow> = Vec::new();
     let mut home_timeline = egg_mode::tweet::home_timeline(&consumer_token, &access_token).with_page_size(5);
-    
+
     for status in &home_timeline.start().unwrap().response {
-        timeline.push(
-            TimelineRow {
-                tweet: Tweet {
-                    created_at: format!("{}", status.created_at.with_timezone(&chrono::Local)),
-                    id: status.id.clone(),
-                    text: status.text.clone(),
-                    user: User {
-                        screen_name: status.user.screen_name.clone(),
-                        profile_image_url: status.user.profile_image_url.clone(),
-                    },
+        timeline.push(TimelineRow {
+            tweet: Tweet {
+                created_at: format!("{}", status.created_at.with_timezone(&chrono::Local)),
+                id: status.id.clone(),
+                text: status.text.clone(),
+                user: User {
+                    screen_name: status.user.screen_name.clone(),
+                    profile_image_url: status.user.profile_image_url.clone(),
                 },
-                unread: true,
-            }
-        );        
-        println!("{:?}", &status);
+            },
+            unread: true,
+        });
+        // println!("{:?}", &status);
     }
 
-    Ok(timeline)    
+    Ok(timeline)
 }
-
 // pub fn get_last_tweets(consumer_token: egg_mode::Token, access_token: egg_mode::Token, param: &oauth_client::ParamList) -> Result<Vec<Tweet>, egg_mode::error::Error> {
 //     match oauth_client::get(api_twitter_soft::HOME_TIMELINE, consumer_token, Some(access_token), Some(param)) {
 //         Ok(bytes) => {

@@ -1,11 +1,11 @@
 extern crate toml;
 
-use std::path;
-use std::io;
-use std::fs::File;
-use std::io::prelude::*;
-use std::str::FromStr;
 use std::cell::Cell;
+use std::fs::File;
+use std::io;
+use std::io::prelude::*;
+use std::path;
+use std::str::FromStr;
 
 
 const DEFAULT: &'static str = r#"
@@ -104,11 +104,10 @@ impl Config {
         try!(file.read_to_string(&mut body));
 
         let value = try!(toml::Value::from_str(body.as_ref()));
-        let toml = try!(toml::decode(value)
-                        .ok_or("failed to decode toml value".to_owned()));
+        let toml = try!(toml::decode(value).ok_or("failed to decode toml value".to_owned()));
         let filename = try!(filename.to_str()
-                            .ok_or("failed to generalize filename path to string".to_owned())
-        ).to_string();
+                .ok_or("failed to generalize filename path to string".to_owned()))
+            .to_string();
         let config: Config = Config {
             filename: filename,
             toml: toml,
