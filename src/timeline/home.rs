@@ -9,11 +9,8 @@ use regex;
 
 use gtk;
 use gtk::prelude::*;
-use gtk::{ListBox, ListBoxRow, Revealer, Widget};
 use gtk::{Orientation, RevealerTransitionType};
 use gtk::{Image, Label};
-
-use rustc_serialize::Decodable;
 
 use std::clone::Clone;
 
@@ -22,7 +19,7 @@ use std::clone::Clone;
 pub enum TimelineError {
     CreateWidget(CreateWidgetError),
     String(String),
-    Widget(Widget),
+    Widget(gtk::Widget),
 }
 
 impl From<CreateWidgetError> for TimelineError {
@@ -37,8 +34,8 @@ impl From<String> for TimelineError {
     }
 }
 
-impl From<Widget> for TimelineError {
-    fn from(err: Widget) -> TimelineError {
+impl From<gtk::Widget> for TimelineError {
+    fn from(err: gtk::Widget) -> TimelineError {
         TimelineError::Widget(err)
     }
 }
@@ -104,7 +101,7 @@ pub fn fixup_home(timeline: &mut Vec<TimelineRow>, limit: usize) {
     }
 }
 
-pub fn update_home_timeline(listbox: &ListBox, timeline: &Vec<TimelineRow>, add: bool, unread_filter: bool) -> Result<(), TimelineError> {
+pub fn update_home_timeline(listbox: &gtk::ListBox, timeline: &Vec<TimelineRow>, add: bool, unread_filter: bool) -> Result<(), TimelineError> {
     // when add flag is false, refresh all listboxrow
     if !add {
         for widget in listbox.get_children() {
@@ -125,7 +122,7 @@ pub fn update_home_timeline(listbox: &ListBox, timeline: &Vec<TimelineRow>, add:
             if row.tweet.user.screen_name == mute {
                 break;
             } else if mute == last_mute {
-                let listboxrow = ListBoxRow::new();
+                let listboxrow = gtk::ListBoxRow::new();
                 let revealer = try!(create_revealer(row.clone()));
                 listboxrow.add(&revealer);                
                 listbox.insert(&listboxrow, index);
@@ -138,7 +135,7 @@ pub fn update_home_timeline(listbox: &ListBox, timeline: &Vec<TimelineRow>, add:
     return Ok(());
 }
 
-pub fn create_revealer(row: TimelineRow) -> Result<Revealer, CreateWidgetError> {
+pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetError> {
     let create_box_header = move | tweet: Tweet | -> Result<gtk::Box, CreateWidgetError> {
         let user_label = Label::new(None);
         let user = format!("<b>@{}:</b>(archived)",tweet.user.screen_name);
@@ -213,9 +210,9 @@ pub fn create_revealer(row: TimelineRow) -> Result<Revealer, CreateWidgetError> 
         return Ok(box_revealer)
     };
 
-    let create_revealer = move | row: TimelineRow | -> Result<Revealer, CreateWidgetError> {
+    let create_revealer = move | row: TimelineRow | -> Result<gtk::Revealer, CreateWidgetError> {
         // FixMe: revealer is not available        
-        let revealer = Revealer::new();
+        let revealer = gtk::Revealer::new();
         revealer.set_transition_type(RevealerTransitionType::Crossfade);
         revealer.set_transition_duration(15000);
         revealer.set_reveal_child(true);
@@ -235,7 +232,7 @@ pub fn create_revealer(row: TimelineRow) -> Result<Revealer, CreateWidgetError> 
     Ok(revealer)
 }
 
-pub fn create_expanded_revealer(row: TimelineRow) -> Result<Revealer, CreateWidgetError> {
+pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetError> {
     let create_expanded_box_header = move | tweet: Tweet | -> Result<gtk::Box, CreateWidgetError> {
         let user_label = Label::new(None);
         let user = format!("<b>@{}:</b>",tweet.user.screen_name);
@@ -310,9 +307,9 @@ pub fn create_expanded_revealer(row: TimelineRow) -> Result<Revealer, CreateWidg
         return Ok(box_revealer)
     };
 
-    let create_expanded_revealer = move | row: TimelineRow | -> Result<Revealer, CreateWidgetError> {
+    let create_expanded_revealer = move | row: TimelineRow | -> Result<gtk::Revealer, CreateWidgetError> {
         // FixMe: revealer is not available        
-        let revealer = Revealer::new();
+        let revealer = gtk::Revealer::new();
         revealer.set_transition_type(RevealerTransitionType::Crossfade);
         revealer.set_transition_duration(3000);
         revealer.set_reveal_child(true);
@@ -333,18 +330,13 @@ pub fn create_expanded_revealer(row: TimelineRow) -> Result<Revealer, CreateWidg
     Ok(revealer)
 }
 
-pub fn show_listboxrow(listboxrow: &ListBoxRow) -> Result<(), Widget> {
+pub fn show_listboxrow(listboxrow: &gtk::ListBoxRow) -> Result<(), gtk::Widget> {
     listboxrow.show_all();
-    let revealer = listboxrow.get_child().unwrap().downcast::<Revealer>().unwrap();
+    let revealer = listboxrow.get_child().unwrap().downcast::<gtk::Revealer>().unwrap();
     let listboxrow_box = revealer.get_child().unwrap().downcast::<gtk::Box>().unwrap();
     listboxrow_box.get_children()[4].hide();
     listboxrow_box.get_children()[5].hide();
     Ok(())
-}
-
-mod api_twitter_soft {
-    // pub const UPDATE_STATUS: &'static str = "https://api.twitter.com/1.1/statuses/update.json";
-    pub const HOME_TIMELINE: &'static str = "https://api.twitter.com/1.1/statuses/home_timeline.json";
 }
 
 pub fn get_home_timeline(consumer_token: &egg_mode::Token, access_token: &egg_mode::Token) -> Result<Vec<TimelineRow>, egg_mode::error::Error> {

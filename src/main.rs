@@ -89,10 +89,10 @@ pub fn main() {
 
     // load timeline cache
     let cache_home_timeline = cache_dir.clone().join("home_timeline.json");
-    // let home_timeline: Vec<timeline::home::TimelineRow> = match cache::load(cache_home_timeline) {
-    //     Ok(home) => home,
-    //     Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
-    // };
+    let home_timeline: Vec<timeline::home::TimelineRow> = match cache::load(cache_home_timeline) {
+        Ok(home) => home,
+        Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
+    };
     let home_timeline: Vec<timeline::home::TimelineRow> = vec!();
     let home_timeline = Arc::new(Mutex::new(home_timeline));
 

@@ -44,17 +44,17 @@ pub fn write(filename: path::PathBuf, timeline: &Vec<::timeline::home::TimelineR
     Ok(())
 }
 
-// pub fn load(filename: path::PathBuf) -> Result<Vec<::timeline::home::TimelineRow>, CacheError> {
-//     let mut file = match File::open(filename) {
-//         Ok(file) => file,
-//         Err(_) => {
-//             let home: Vec<::timeline::home::TimelineRow> = Vec::new();
-//             return Ok(home);
-//         },
-//     };
+pub fn load(filename: path::PathBuf) -> Result<Vec<::timeline::home::TimelineRow>, CacheError> {
+    let mut file = match File::open(filename) {
+        Ok(file) => file,
+        Err(_) => {
+            let home: Vec<::timeline::home::TimelineRow> = Vec::new();
+            return Ok(home);
+        },
+    };
 
-//     let mut body = String::new();
-//     try!(file.read_to_string(&mut body));
-//     let home = try!(json::decode(body.as_str()).map_err(CacheError::JsonDecoder));
-//     Ok(home)
-// }
+    let mut body = String::new();
+    try!(file.read_to_string(&mut body));
+    let home = try!(json::decode(body.as_str()).map_err(CacheError::JsonDecoder));
+    Ok(home)
+}
