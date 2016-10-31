@@ -71,57 +71,8 @@ impl From<::utils::UtilsError> for CreateWidgetError {
     }
 }
 
-// #[derive(Clone, Debug, RustcEncodable, RustcDecodable)]
-// pub enum Tweet {
-//     Tweet(egg_mode::tweet::Tweet),
-// }
-
-// impl From<egg_mode::tweet::Tweet> for Tweet {
-//     fn from(tweet: egg_mode::tweet::Tweet) -> Tweet {
-//         Tweet::Tweet(tweet)
-//     }
-// }
-
-// // use rustc_serialize::json;
-// ///Helper trait to provide a general interface for deserializing Twitter API data structures.
-// // pub trait FromJson : Sized {
-// pub trait AsString : Sized {
-//     ///Parse the given Json object into a data structure.
-//     // fn from_json(&json::Json) -> Result<Self, error::Error>;
-//     // fn as_json(egg_mode::tweet::Tweet) -> Result<String, json::Json::Error>;
-
-//     ///Parse the given string into a Json object, then into a data structure.
-//     // fn from_str(input: &str) -> Result<Self, error::Error> {
-//     //     let json = try!(json::Json::from_str(input));
-
-//     //     Self::from_json(&json)
-//     // }
-//     fn as_string<'a>(input: &'a egg_mode::tweet::Tweet) -> Option<&'a str>;
-// }
-
-// impl AsString for egg_mode::tweet::Tweet {
-//     fn as_string<'a>(input: &'a Self) -> Option<&'a str> {
-//         let json = match json::Json::as_string(input) {
-//             json => json,
-//             None => None,
-//         };
-//     }
-// }
-// use std::clone::Clone;
-
-
-// impl<'a> Clone for &'a egg_mode::tweet::Tweet {
-//   // impl Clone for egg_mode::tweet::Tweet {
-// // impl Clone for egg_mode::tweet::Tweet {
-//     #[inline]
-//     fn clone(&self) -> &'a egg_mode::tweet::Tweet{ *self }    
-// }
-
-// #[derive(Clone, Debug, RustcEncodable, RustcDecodable)]
-
 #[derive(Clone, Debug)]
 pub struct TimelineRow {
-    // pub tweet: Tweet,
     pub tweet: Tweet,
     pub unread: bool,
 }
@@ -134,14 +85,6 @@ pub struct Tweet {
     pub user: User,
     // pub retweeted_status: RetweetedStatus,
 }
-
-// impl Tweet {
-//     pub fn parse_timeline(json_string: String) -> Result<Vec<Tweet>, twitter_api::Error> {
-//         let value = try!(Json::from_str(&json_string));
-//         let decoded = try!(Decodable::decode(&mut json::Decoder::new(value)));
-//         Ok(decoded)
-//     }
-// }
 
 #[derive(Clone, Debug, RustcEncodable, RustcDecodable)]
 pub struct User {
@@ -421,19 +364,18 @@ pub fn get_home_timeline(consumer_token: &egg_mode::Token, access_token: &egg_mo
         timeline.push(
             TimelineRow {
                 tweet: Tweet {
-                    created_at: format!("{}", status.clone().created_at),
-                    id: status.clone().id.clone(),
-                    text: status.clone().text.clone(),
+                    created_at: format!("{}", status.created_at),
+                    id: status.id.clone(),
+                    text: status.text.clone(),
                     user: User {
-                        screen_name: status.clone().user.screen_name.clone(),
-                        profile_image_url: status.clone().user.profile_image_url.clone(),
+                        screen_name: status.user.screen_name.clone(),
+                        profile_image_url: status.user.profile_image_url.clone(),
                     },
                 },
                 unread: true,
             }
         );        
         println!("{:?}", &status);
-        println!("");
     }
 
     Ok(timeline)
