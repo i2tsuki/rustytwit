@@ -150,10 +150,7 @@ pub fn create_revealer(row: TimelineRow) -> Result<Revealer, CreateWidgetError> 
         user_label.set_xalign(0.0);
             
         let created_at_label = Label::new(None);
-        let parsed = try!(time::strptime(&tweet.created_at, "%a %b %d %H:%M:%S %z %Y"));
-        let created_at = try!(parsed.to_local().strftime("%a, %H:%M")).to_string();        
-        // let created_at = format!("{}", tweet.created_at.format("%a, %H:%M"));
-        created_at_label.set_text(created_at.as_ref());
+        created_at_label.set_text(tweet.created_at.as_ref());
         let box_header = gtk::Box::new(Orientation::Horizontal, 2);
         box_header.pack_start(&user_label, true, true, 0);
         box_header.pack_start(&created_at_label, false, false, 0);
@@ -250,10 +247,7 @@ pub fn create_expanded_revealer(row: TimelineRow) -> Result<Revealer, CreateWidg
         user_label.set_xalign(0.0);
             
         let created_at_label = Label::new(None);
-        let parsed = try!(time::strptime(&tweet.created_at, "%a %b %d %H:%M:%S %z %Y"));
-        let created_at = try!(parsed.to_local().strftime("%a, %H:%M")).to_string();
-        // let created_at = format!("{}", tweet.created_at.format("%a, %H:%M"));
-        created_at_label.set_text(created_at.as_ref());
+        created_at_label.set_text(tweet.created_at.as_ref());
 
         let box_header = gtk::Box::new(Orientation::Horizontal, 2);
         box_header.pack_start(&user_label, true, true, 0);
@@ -360,7 +354,6 @@ pub fn get_home_timeline(consumer_token: &egg_mode::Token, access_token: &egg_mo
     let mut home_timeline = egg_mode::tweet::home_timeline(&consumer_token, &access_token).with_page_size(5);
     
     for status in &home_timeline.start().unwrap().response {
-        // let s = Rc::new(status);
         timeline.push(
             TimelineRow {
                 tweet: Tweet {
@@ -378,22 +371,7 @@ pub fn get_home_timeline(consumer_token: &egg_mode::Token, access_token: &egg_mo
         println!("{:?}", &status);
     }
 
-    Ok(timeline)
-    
-    // match get_last_tweets(consumer, access, param) {
-    //     Ok(tweets) => {
-    //         for tweet in tweets {
-    //             timeline.push(
-    //                 TimelineRow {
-    //                     tweet: tweet.clone(),
-    //                     unread: true,
-    //                 }
-    //             );
-    //         }
-    //         return Ok(timeline)
-    //     },
-    //     Err(err) => return Err(err),
-    // }
+    Ok(timeline)    
 }
 
 // pub fn get_last_tweets(consumer_token: egg_mode::Token, access_token: egg_mode::Token, param: &oauth_client::ParamList) -> Result<Vec<Tweet>, egg_mode::error::Error> {
