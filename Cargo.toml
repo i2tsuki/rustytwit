@@ -1,0 +1,26 @@
+[package]
+authors = ["kizkoh"]
+name = "rustytwit"
+version = "0.0.1"
+
+[dependencies]
+curl = "0.2"
+egg-mode = "0.6.0"
+env_logger = "*"
+gdk = "*"
+gdk-pixbuf = "0.1.0"
+gdk-pixbuf-sys = "*"
+getopts = "*"
+glib = "0.1.0"
+gtk-sys = "*"
+libc = "0.2.11"
+log = "*"
+regex = "0.1.80"
+rust-crypto = "0.2"
+rustc-serialize = "*"
+time = "0.1"
+toml = "0.1.30"
+
+[dependencies.gtk]
+features = ["v3_16"]
+version = "0.1.0"
