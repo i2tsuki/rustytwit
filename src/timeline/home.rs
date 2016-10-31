@@ -112,7 +112,8 @@ pub fn update_home_timeline(listbox: &gtk::ListBox,
         }
     }
 
-    let mute_user = vec!["syuu1228", "kakkun61", "methane"];
+    // とりあえず、いっぱいつぶやくユーザをフィルタ
+    let mute_user = vec!["syuu1228", "kakkun61", "methane", "tanakah"];
     let mut index: i32 = 0;
 
     let last_mute = try!(mute_user.last().ok_or("".to_owned())).to_string();
