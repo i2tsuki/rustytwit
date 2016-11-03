@@ -243,7 +243,10 @@ pub fn main() {
             timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
             match timeline::home::update_home_timeline(&listbox, timeline, false, flag) {
                 Ok(_) => (),
-                Err(err) => { error!("{:?}", err); panic!("{:?}", err) },
+                Err(err) => {
+                    error!("{:?}", err);
+                    panic!("{:?}", err)
+                },
             }
             debug!("{}", flag);
             return Inhibit(false);
@@ -346,15 +349,15 @@ pub fn main() {
         refresh_button.connect_clicked(move |_| {
             let ref consumer_token = *consumer_token.as_ref();
             let ref access_token = *access_token.as_ref();
-            // let mut param = ParamList::new();
-            // param.insert(Cow::Owned("count".to_string()),
-            //              Cow::Owned(format!("{}", 200)));
-            // param.insert(Cow::Owned("since_id".to_string()),
-            //              Cow::Owned(format!("{}", config.toml.home_timeline.last_update_id.get())));
-            let tweets = match timeline::home::get_home_timeline(consumer_token, access_token) {
-                Ok(tweets) => tweets,
-                Err(_) => return,
-            };
+            let tweets =
+                match timeline::home::get_home_timeline(consumer_token,
+                                                        access_token,
+                                                        Some(config.toml.home_timeline.last_update_id.get() as i64),
+                                                        None) {
+                    // Some(config.toml.home_timeline.limits.get() as i64)) {
+                    Ok(tweets) => tweets,
+                    Err(_) => return,
+                };
             match tweets.first() {
                 Some(row) => config.toml.home_timeline.last_update_id.set(row.tweet.id),
                 None => (),
@@ -512,7 +515,13 @@ pub fn main() {
                 // param.insert(Cow::Owned("since_id".to_string()),
                 //              Cow::Owned(format!("{}", config.toml.home_timeline.last_update_id.get())));
 
-                let timeline = match timeline::home::get_home_timeline(consumer_token, access_token) {
+                let timeline = match timeline::home::get_home_timeline(
+                    consumer_token,
+                    access_token,
+                    Some(config.toml.home_timeline.last_update_id.get() as i64),
+                    None,
+                    // Some(config.toml.home_timeline.limits.get() as i64),
+                ) {
                     Ok(timeline) => timeline,
                     Err(err) => {
                         error!("{:?}", err);

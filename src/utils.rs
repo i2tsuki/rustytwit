@@ -46,25 +46,21 @@ pub fn get_profile_image(profile_image_url: &String) -> Result<String, UtilsErro
     match File::open(cache_dir.join(sha256.result_str())) {
         Ok(_) => (),
         Err(_) => {
-            let resp = match http::handle().get(profile_image_url.as_str()).exec() {
-                Ok(resp) => resp,
+            match http::handle().get(profile_image_url.as_str()).exec() {
+                Ok(resp) => {
+                    match resp.get_code() {
+                        200 => {
+                            try!(File::create(cache_dir.join(sha256.result_str()))?.write_all(resp.get_body()));
+                        },
+                        code => {
+                            return Err(UtilsError::String(format!("response status is {}", code)));
+                        },
+                    }
+                },
                 Err(err) => {
-                    let e = UtilsError::String(format!("{:?}", err));
-                    return Err(e);
+                    return Err(UtilsError::String(format!("{:?}", err)));
                 },
             };
-            if resp.get_code() != 200 {
-                let e = UtilsError::String(format!("response status is {}", resp.get_code()));
-                return Err(e);
-            }
-            let result = File::create(format!("/home/kinoo/.cache/rustytwit/image/{}", sha256.result_str()));
-            if result.is_err() {
-                ::std::process::exit(1);
-            }
-            let result = result.unwrap().write_all(resp.get_body());
-            if result.is_err() {
-                ::std::process::exit(1);
-            }
         },
     }
 

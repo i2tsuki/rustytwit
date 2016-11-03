@@ -37,7 +37,7 @@ impl From<json::DecoderError> for CacheError {
 }
 
 pub fn write(filename: path::PathBuf, timeline: &Vec<::timeline::home::TimelineRow>) -> Result<(), CacheError> {
-    try!(File::create(filename.clone()) ? .write_all(json::encode(timeline) ? .as_bytes()));
+    try!(File::create(filename.clone())?.write_all(json::encode(timeline)?.as_bytes()));
     info!("wrote cache to {:?}", filename);
     Ok(())
 }

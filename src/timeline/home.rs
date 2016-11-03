@@ -113,7 +113,8 @@ pub fn update_home_timeline(listbox: &gtk::ListBox,
     }
 
     // とりあえず、いっぱいつぶやくユーザをフィルタ
-    let mute_user = vec!["syuu1228", "kakkun61", "methane", "tanakah"];
+    let mute_user = vec!["syuu1228", "kakkun61", "methane", "tanakh"];
+    // let mute_user = vec![""];
     let mut index: i32 = 0;
 
     let last_mute = try!(mute_user.last().ok_or("".to_owned())).to_string();
@@ -344,12 +345,15 @@ pub fn show_listboxrow(listboxrow: &gtk::ListBoxRow) -> Result<(), gtk::Widget> 
 }
 
 pub fn get_home_timeline(consumer_token: &egg_mode::Token,
-                         access_token: &egg_mode::Token)
+                         access_token: &egg_mode::Token,
+                         since_id: Option<i64>,
+                         max_id: Option<i64>)
                          -> Result<Vec<TimelineRow>, egg_mode::error::Error> {
     let mut timeline: Vec<TimelineRow> = Vec::new();
-    let mut home_timeline = egg_mode::tweet::home_timeline(&consumer_token, &access_token).with_page_size(5);
+    let home_timeline = egg_mode::tweet::home_timeline(&consumer_token, &access_token).with_page_size(1);
 
-    for status in &home_timeline.start().unwrap().response {
+    for status in &home_timeline.call(since_id, max_id).unwrap().response {
+        let max_id = home_timeline.max_id;
         timeline.push(TimelineRow {
             tweet: Tweet {
                 created_at: format!("{}", status.created_at.with_timezone(&chrono::Local)),
