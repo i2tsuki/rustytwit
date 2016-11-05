@@ -22,7 +22,7 @@ last_read_id = 1
 limits = 500
 "#;
 
-// error
+// ConfigError
 #[derive(Debug)]
 pub enum ConfigError {
     Io(io::Error),
@@ -48,14 +48,14 @@ impl From<String> for ConfigError {
     }
 }
 
-// struct definition
+// Struct definition
 #[derive(Clone, Debug)]
 pub struct Config {
     pub filename: String,
     pub toml: Toml,
 }
 
-// toml struct implementation
+// Toml struct implementation
 #[derive(Clone, Debug, RustcEncodable, RustcDecodable)]
 pub struct Toml {
     pub general: General,

@@ -344,16 +344,19 @@ pub fn show_listboxrow(listboxrow: &gtk::ListBoxRow) -> Result<(), gtk::Widget> 
     Ok(())
 }
 
-pub fn get_home_timeline(consumer_token: &egg_mode::Token,
-                         access_token: &egg_mode::Token,
-                         since_id: Option<i64>,
-                         max_id: Option<i64>)
-                         -> Result<Vec<TimelineRow>, egg_mode::error::Error> {
+pub fn home_timeline(consumer_token: &egg_mode::Token,
+                     access_token: &egg_mode::Token,
+                     since_id: Option<i64>,
+                     max_id: Option<i64>)
+                     -> Result<(Vec<TimelineRow>, i64), egg_mode::error::Error> {
     let mut timeline: Vec<TimelineRow> = Vec::new();
     let home_timeline = egg_mode::tweet::home_timeline(&consumer_token, &access_token).with_page_size(1);
-
+    let timeline_max_id = match home_timeline.max_id {
+        Some(max_id) => max_id,
+        None => 0,
+    };
+    
     for status in &home_timeline.call(since_id, max_id).unwrap().response {
-        let max_id = home_timeline.max_id;
         timeline.push(TimelineRow {
             tweet: Tweet {
                 created_at: format!("{}", status.created_at.with_timezone(&chrono::Local)),
@@ -369,7 +372,7 @@ pub fn get_home_timeline(consumer_token: &egg_mode::Token,
         // println!("{:?}", &status);
     }
 
-    Ok(timeline)
+    Ok((timeline, timeline_max_id))
 }
 // pub fn get_last_tweets(consumer_token: egg_mode::Token, access_token: egg_mode::Token, param: &oauth_client::ParamList) -> Result<Vec<Tweet>, egg_mode::error::Error> {
 //     match oauth_client::get(api_twitter_soft::HOME_TIMELINE, consumer_token, Some(access_token), Some(param)) {

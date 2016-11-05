@@ -349,19 +349,18 @@ pub fn main() {
         refresh_button.connect_clicked(move |_| {
             let ref consumer_token = *consumer_token.as_ref();
             let ref access_token = *access_token.as_ref();
-            let tweets =
-                match timeline::home::get_home_timeline(consumer_token,
-                                                        access_token,
-                                                        Some(config.toml.home_timeline.last_update_id.get() as i64),
-                                                        None) {
+            let (tweets, max_id) =
+                match timeline::home::home_timeline(consumer_token,
+                                                    access_token,
+                                                    Some(config.toml.home_timeline.last_update_id.get() as i64),
+                                                    None) {
                     // Some(config.toml.home_timeline.limits.get() as i64)) {
-                    Ok(tweets) => tweets,
-                    Err(_) => return,
+                    Ok((tweets, id)) => (tweets, id),
+                    Err(_) => { std::process::exit(1); },
                 };
-            match tweets.first() {
-                Some(row) => config.toml.home_timeline.last_update_id.set(row.tweet.id),
-                None => (),
-            };
+            if max_id != 0 {
+                config.toml.home_timeline.last_update_id.set(max_id);
+            }
 
             // add tweets to home_timeline and update home_timeline
             {
@@ -505,46 +504,32 @@ pub fn main() {
         thread::spawn(move || {
             let ref consumer_token = consumer_token.as_ref();
             let ref access_token = access_token.as_ref();
-
+            let retry_secs = 60;
+            let duration = 600;
             loop {
-                let retry_secs = 60;
-                let duration = 600;
-                // let mut param = ParamList::new();
-                // param.insert(Cow::Owned("count".to_string()),
-                //              Cow::Owned(format!("{}", config.toml.home_timeline.limits.get())));
-                // param.insert(Cow::Owned("since_id".to_string()),
-                //              Cow::Owned(format!("{}", config.toml.home_timeline.last_update_id.get())));
-
-                let timeline = match timeline::home::get_home_timeline(
+                let (timeline, max_id) = match timeline::home::home_timeline(
                     consumer_token,
                     access_token,
                     Some(config.toml.home_timeline.last_update_id.get() as i64),
                     None,
                     // Some(config.toml.home_timeline.limits.get() as i64),
                 ) {
-                    Ok(timeline) => timeline,
+                    Ok((timeline, max_id)) => (timeline, max_id),
                     Err(err) => {
                         error!("{:?}", err);
-                        error!("try later, after {} seconds", retry_secs);
+                        debug!("it will try it after {} seconds", retry_secs);
                         thread::sleep(time::Duration::from_secs(retry_secs));
                         continue;
                     },
                 };
-                info!("thread: get_home_timeline()");
-                match timeline.first() {
-                    Some(row) => {
-                        let id = row.tweet.id;
-                        config.toml.home_timeline.last_update_id.set(id);
-                        match tx.send(timeline.clone()) {
-                            Ok(_) => (),
-                            Err(err) => {
-                                error!("{:?}", err);
-                                panic!("{:?}", err);
-                            },
-                        }
-                    },
-                    None => {
-                        debug!("thread: timeline is None");
+                if max_id != 0 {
+                    config.toml.home_timeline.last_update_id.set(max_id);
+                }
+                match tx.send(timeline.clone()) {
+                    Ok(_) => (),
+                    Err(err) => {
+                       error!("{:?}", err);
+                        panic!("{:?}", err);
                     },
                 };
                 thread::sleep(time::Duration::from_secs(duration));
