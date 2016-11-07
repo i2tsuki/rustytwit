@@ -77,6 +77,7 @@ pub struct Tweet {
     pub created_at: String,
     pub id: i64,
     pub text: String,
+    pub attr: String,
     pub user: User, // pub retweeted_status: RetweetedStatus,
 }
 
@@ -143,7 +144,7 @@ pub fn update_home_timeline(listbox: &gtk::ListBox,
 pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetError> {
     let create_box_header = move |tweet: Tweet| -> Result<gtk::Box, CreateWidgetError> {
         let user_label = Label::new(None);
-        let user = format!("<b>@{}:</b>(archived)", tweet.user.screen_name);
+        let user = format!("<b>{}</b>", tweet.attr);
         user_label.set_text(user.as_ref());
         user_label.set_selectable(true);
         user_label.set_use_markup(true);
@@ -240,7 +241,7 @@ pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetEr
 pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetError> {
     let create_expanded_box_header = move |tweet: Tweet| -> Result<gtk::Box, CreateWidgetError> {
         let user_label = Label::new(None);
-        let user = format!("<b>@{}:</b>", tweet.user.screen_name);
+        let user = format!("<b>{}</b>", tweet.attr);
         user_label.set_text(user.as_ref());
         user_label.set_selectable(true);
         user_label.set_use_markup(true);
@@ -354,14 +355,27 @@ pub fn home_timeline(consumer_token: &egg_mode::Token,
     let max_id = match home_timeline.max_id {
         Some(max_id) => max_id,
         None => 0,
-    };
-    
+    };    
     for status in &home_timeline.call(since_id, None).unwrap().response {
+        let mut text = status.text.clone();
+        let mut attr = format!("@{}", status.user.screen_name);
+        if let Some(ref screen_name) = status.in_reply_to_screen_name {
+            attr = format!("@{} --> in reply to @{}",
+                           status.user.screen_name,
+                           screen_name);
+        }
+        if let Some(ref retweeted_status) = status.retweeted_status {
+            text = retweeted_status.text.clone();
+            attr = format!("@{} retweeted from @{}",
+                           status.user.screen_name,
+                           retweeted_status.user.screen_name);
+        }        
         timeline.push(TimelineRow {
             tweet: Tweet {
                 created_at: format!("{}", status.created_at.with_timezone(&chrono::Local)),
                 id: status.id.clone(),
-                text: status.text.clone(),
+                text: text,
+                attr: attr,
                 user: User {
                     screen_name: status.user.screen_name.clone(),
                     profile_image_url: status.user.profile_image_url.clone(),
@@ -369,41 +383,13 @@ pub fn home_timeline(consumer_token: &egg_mode::Token,
             },
             unread: true,
         });
-        // println!("{:?}", &status);
+        println!("{:?}", status);
     }
 
     Ok((timeline, max_id))
 }
-// pub fn get_last_tweets(consumer_token: egg_mode::Token, access_token: egg_mode::Token, param: &oauth_client::ParamList) -> Result<Vec<Tweet>, egg_mode::error::Error> {
-//     match oauth_client::get(api_twitter_soft::HOME_TIMELINE, consumer_token, Some(access_token), Some(param)) {
-//         Ok(bytes) => {
-//             let last_tweets_json = try!(String::from_utf8(bytes));
-//             let tweets = try!(Tweet::parse_timeline(last_tweets_json));
-//             Ok(tweets)
-//         },
-//         Err(err) => return Err(twitter_api::Error::OAuth(err)),
-//     }
-// }
-
-
-// extern crate chrono;
 
 // pub fn print_tweet(tweet: &egg_mode::tweet::Tweet) {
-//     println!("{} (@{}) posted at {}", tweet.user.name, tweet.user.screen_name, tweet.created_at.with_timezone(&chrono::Local));
-
-//     if let Some(ref screen_name) = tweet.in_reply_to_screen_name {
-//         println!("--> in reply to @{}", screen_name);
-//     }
-
-//     if let Some(ref status) = tweet.retweeted_status {
-//         println!("Retweeted from {}:", status.user.name);
-//         print_tweet(status);
-//         return;
-//     }
-//     else {
-//         println!("{}", tweet.text);
-//     }
-
 //     println!("--via {} ({})", tweet.source.name, tweet.source.url);
 
 //     if let Some(ref place) = tweet.place {
