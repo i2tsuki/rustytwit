@@ -241,7 +241,7 @@ pub fn main() {
             debug!("switch_unread is {}", switch.get_active());
             let timeline = guard.deref_mut();
             timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
-            match timeline::home::update_home_timeline(&listbox, timeline, false, flag) {
+            match timeline::home::update_home(&listbox, timeline, false, flag) {
                 Ok(_) => (),
                 Err(err) => {
                     error!("{:?}", err);
@@ -286,7 +286,7 @@ pub fn main() {
             debug!("switch_unread is {}", switch.get_active());
             let timeline = guard.deref_mut();
             timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
-            match timeline::home::update_home_timeline(&listbox, timeline, false, flag) {
+            match timeline::home::update_home(&listbox, timeline, false, flag) {
                 Ok(_) => (),
                 Err(err) => {
                     error!("{:?}", err);
@@ -326,7 +326,7 @@ pub fn main() {
         };
         let mut timeline = guard.deref_mut();
         timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
-        match timeline::home::update_home_timeline(&listbox, timeline, false, false) {
+        match timeline::home::update_home(&listbox, timeline, false, false) {
             Ok(_) => (),
             Err(err) => {
                 error!("{:?}", err);
@@ -349,17 +349,20 @@ pub fn main() {
         refresh_button.connect_clicked(move |_| {
             let ref consumer_token = *consumer_token.as_ref();
             let ref access_token = *access_token.as_ref();
-            let home_timeline = match timeline::home::home_timeline(consumer_token,
-                                                                    access_token,
-                                                                    Some(config.toml.home_timeline.last_update_id.get() as i64),
-                                                                    config.toml.home_timeline.limits.get() as i32) {
-                Ok(home_timeline) => (home_timeline),
-                Err(_) => { std::process::exit(1); },
-            };
+            let home_timeline =
+                match timeline::home::home_timeline(consumer_token,
+                                                    access_token,
+                                                    Some(config.toml.home_timeline.last_update_id.get() as i64),
+                                                    config.toml.home_timeline.limits.get() as i32) {
+                    Ok(home_timeline) => (home_timeline),
+                    Err(_) => {
+                        std::process::exit(1);
+                    },
+                };
             match home_timeline.first() {
                 Some(status) => config.toml.home_timeline.last_update_id.set(status.tweet.id),
                 None => (),
-            }           
+            }
             // add tweets to home_timeline and update home_timeline
             {
                 let mut guard = match home.lock() {
@@ -374,7 +377,7 @@ pub fn main() {
                 let mut timeline = guard.deref_mut();
                 timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
             }
-            match timeline::home::update_home_timeline(&listbox, &home_timeline, true, false) {
+            match timeline::home::update_home(&listbox, &home_timeline, true, false) {
                 Ok(_) => (),
                 Err(err) => {
                     error!("{:?}", err);
@@ -505,20 +508,19 @@ pub fn main() {
             let retry_secs = 60;
             let duration = 600;
             loop {
-                let timeline = match timeline::home::home_timeline(
-                    consumer_token,
-                    access_token,
-                    Some(config.toml.home_timeline.last_update_id.get() as i64),
-                    config.toml.home_timeline.limits.get() as i32,
-                ) {
-                    Ok(timeline) => timeline,
-                    Err(err) => {
-                        error!("{:?}", err);
-                        debug!("it will try it after {} seconds", retry_secs);
-                        thread::sleep(time::Duration::from_secs(retry_secs));
-                        continue;
-                    },
-                };
+                let timeline =
+                    match timeline::home::home_timeline(consumer_token,
+                                                        access_token,
+                                                        Some(config.toml.home_timeline.last_update_id.get() as i64),
+                                                        config.toml.home_timeline.limits.get() as i32) {
+                        Ok(timeline) => timeline,
+                        Err(err) => {
+                            error!("{:?}", err);
+                            debug!("it will try it after {} seconds", retry_secs);
+                            thread::sleep(time::Duration::from_secs(retry_secs));
+                            continue;
+                        },
+                    };
                 match timeline.first() {
                     Some(status) => config.toml.home_timeline.last_update_id.set(status.tweet.id),
                     None => (),
@@ -526,7 +528,7 @@ pub fn main() {
                 match tx.send(timeline.clone()) {
                     Ok(_) => (),
                     Err(err) => {
-                       error!("{:?}", err);
+                        error!("{:?}", err);
                         panic!("{:?}", err);
                     },
                 };
@@ -560,7 +562,7 @@ pub fn main() {
                 let mut timeline = guard.deref_mut();
                 timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
             }
-            let _ = timeline::home::update_home_timeline(&listbox, &tweets, true, false);
+            let _ = timeline::home::update_home(&listbox, &tweets, true, false);
 
             return glib::Continue(true);
         };

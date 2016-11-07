@@ -14,7 +14,7 @@ use regex;
 
 use std::clone::Clone;
 
-// TimeilineError
+// TimelineError
 #[derive(Debug)]
 pub enum TimelineError {
     CreateWidget(CreateWidgetError),
@@ -101,11 +101,11 @@ pub fn fixup_home(timeline: &mut Vec<TimelineRow>, limit: usize) {
     }
 }
 
-pub fn update_home_timeline(listbox: &gtk::ListBox,
-                            timeline: &Vec<TimelineRow>,
-                            add: bool,
-                            unread_filter: bool)
-                            -> Result<(), TimelineError> {
+pub fn update_home(listbox: &gtk::ListBox,
+                   timeline: &Vec<TimelineRow>,
+                   add: bool,
+                   unread_filter: bool)
+                   -> Result<(), TimelineError> {
     // when add flag is false, refresh all listboxrow
     if !add {
         for widget in listbox.get_children() {
@@ -241,7 +241,7 @@ pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetEr
 pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetError> {
     let create_expanded_box_header = move |tweet: Tweet| -> Result<gtk::Box, CreateWidgetError> {
         let user_label = Label::new(None);
-        let user = format!("<b>{}</b>", tweet.attr);
+        let user = format!("{}", tweet.attr);
         user_label.set_text(user.as_ref());
         user_label.set_selectable(true);
         user_label.set_use_markup(true);
@@ -365,7 +365,7 @@ pub fn home_timeline(consumer_token: &egg_mode::Token,
             attr = format!("@{} retweeted from @{}",
                            status.user.screen_name,
                            retweeted_status.user.screen_name);
-        }        
+        }
         timeline.push(TimelineRow {
             tweet: Tweet {
                 created_at: format!("{}", status.created_at.with_timezone(&chrono::Local)),
@@ -379,6 +379,7 @@ pub fn home_timeline(consumer_token: &egg_mode::Token,
             },
             unread: true,
         });
+        debug!("{:?}", status);
     }
     Ok(timeline)
 }
