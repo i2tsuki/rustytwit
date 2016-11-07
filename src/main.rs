@@ -349,18 +349,17 @@ pub fn main() {
         refresh_button.connect_clicked(move |_| {
             let ref consumer_token = *consumer_token.as_ref();
             let ref access_token = *access_token.as_ref();
-            let (tweets, max_id) =
-                match timeline::home::home_timeline(consumer_token,
-                                                    access_token,
-                                                    Some(config.toml.home_timeline.last_update_id.get() as i64),
-                                                    config.toml.home_timeline.limits.get() as i32) {
-                    Ok((tweets, id)) => (tweets, id),
-                    Err(_) => { std::process::exit(1); },
-                };
-            if max_id != 0 {
-                config.toml.home_timeline.last_update_id.set(max_id);
-            }
-
+            let home_timeline = match timeline::home::home_timeline(consumer_token,
+                                                                    access_token,
+                                                                    Some(config.toml.home_timeline.last_update_id.get() as i64),
+                                                                    config.toml.home_timeline.limits.get() as i32) {
+                Ok(home_timeline) => (home_timeline),
+                Err(_) => { std::process::exit(1); },
+            };
+            match home_timeline.first() {
+                Some(status) => config.toml.home_timeline.last_update_id.set(status.tweet.id),
+                None => (),
+            }           
             // add tweets to home_timeline and update home_timeline
             {
                 let mut guard = match home.lock() {
@@ -368,14 +367,14 @@ pub fn main() {
                     Err(poisoned) => poisoned.into_inner(),
                 };
                 let mut index = 0;
-                for row in tweets.clone() {
+                for row in home_timeline.clone() {
                     guard.insert(index, row.clone());
                     index += 1;
                 }
                 let mut timeline = guard.deref_mut();
                 timeline::home::fixup_home(timeline, config.toml.home_timeline.limits.get());
             }
-            match timeline::home::update_home_timeline(&listbox, &tweets, true, false) {
+            match timeline::home::update_home_timeline(&listbox, &home_timeline, true, false) {
                 Ok(_) => (),
                 Err(err) => {
                     error!("{:?}", err);
@@ -506,13 +505,13 @@ pub fn main() {
             let retry_secs = 60;
             let duration = 600;
             loop {
-                let (timeline, max_id) = match timeline::home::home_timeline(
+                let timeline = match timeline::home::home_timeline(
                     consumer_token,
                     access_token,
                     Some(config.toml.home_timeline.last_update_id.get() as i64),
                     config.toml.home_timeline.limits.get() as i32,
                 ) {
-                    Ok((timeline, max_id)) => (timeline, max_id),
+                    Ok(timeline) => timeline,
                     Err(err) => {
                         error!("{:?}", err);
                         debug!("it will try it after {} seconds", retry_secs);
@@ -520,8 +519,9 @@ pub fn main() {
                         continue;
                     },
                 };
-                if max_id != 0 {
-                    config.toml.home_timeline.last_update_id.set(max_id);
+                match timeline.first() {
+                    Some(status) => config.toml.home_timeline.last_update_id.set(status.tweet.id),
+                    None => (),
                 }
                 match tx.send(timeline.clone()) {
                     Ok(_) => (),

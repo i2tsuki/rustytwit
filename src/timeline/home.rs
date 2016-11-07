@@ -349,13 +349,9 @@ pub fn home_timeline(consumer_token: &egg_mode::Token,
                      access_token: &egg_mode::Token,
                      since_id: Option<i64>,
                      count: i32)
-                     -> Result<(Vec<TimelineRow>, i64), egg_mode::error::Error> {
+                     -> Result<Vec<TimelineRow>, egg_mode::error::Error> {
     let mut timeline: Vec<TimelineRow> = Vec::new();
     let home_timeline = egg_mode::tweet::home_timeline(&consumer_token, &access_token).with_page_size(count);
-    let max_id = match home_timeline.max_id {
-        Some(max_id) => max_id,
-        None => 0,
-    };    
     for status in &home_timeline.call(since_id, None).unwrap().response {
         let mut text = status.text.clone();
         let mut attr = format!("@{}", status.user.screen_name);
@@ -383,19 +379,11 @@ pub fn home_timeline(consumer_token: &egg_mode::Token,
             },
             unread: true,
         });
-        println!("{:?}", status);
     }
-
-    Ok((timeline, max_id))
+    Ok(timeline)
 }
 
 // pub fn print_tweet(tweet: &egg_mode::tweet::Tweet) {
-//     println!("--via {} ({})", tweet.source.name, tweet.source.url);
-
-//     if let Some(ref place) = tweet.place {
-//         println!("--from {}", place.full_name);
-//     }
-
 //     if let Some(ref status) = tweet.quoted_status {
 //         println!("--Quoting the following status:");
 //         print_tweet(status);
