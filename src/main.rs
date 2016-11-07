@@ -353,8 +353,7 @@ pub fn main() {
                 match timeline::home::home_timeline(consumer_token,
                                                     access_token,
                                                     Some(config.toml.home_timeline.last_update_id.get() as i64),
-                                                    None) {
-                    // Some(config.toml.home_timeline.limits.get() as i64)) {
+                                                    config.toml.home_timeline.limits.get() as i32) {
                     Ok((tweets, id)) => (tweets, id),
                     Err(_) => { std::process::exit(1); },
                 };
@@ -511,8 +510,7 @@ pub fn main() {
                     consumer_token,
                     access_token,
                     Some(config.toml.home_timeline.last_update_id.get() as i64),
-                    None,
-                    // Some(config.toml.home_timeline.limits.get() as i64),
+                    config.toml.home_timeline.limits.get() as i32,
                 ) {
                     Ok((timeline, max_id)) => (timeline, max_id),
                     Err(err) => {
