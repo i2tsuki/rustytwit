@@ -477,7 +477,7 @@ pub fn main() {
                             Err(err) => {
                                 error!("{:?}", err);
                                 return;
-                            }, 
+                            },
                         };
                         listboxrow.add(&revealer);
                         match timeline::home::show_listboxrow(&listboxrow) {
@@ -485,7 +485,7 @@ pub fn main() {
                             Err(err) => {
                                 error!("{:?}", err);
                                 return;
-                            }, 
+                            },
                         }
                         break;
                     }

@@ -106,30 +106,27 @@ pub fn update_home(listbox: &gtk::ListBox,
                    add: bool,
                    unread_filter: bool)
                    -> Result<(), TimelineError> {
-    // when add flag is false, refresh all listboxrow
+    // When add flag is false, refresh all listboxrow
     if !add {
         for widget in listbox.get_children() {
             listbox.remove(&widget);
         }
     }
-
-    // とりあえず、いっぱいつぶやくユーザをフィルタ
-    let mute_user = vec!["syuu1228", "kakkun61", "methane", "tanakh"];
-    // let mute_user = vec![""];
+    // いっぱいつぶやくユーザをフィルタ
+    let muted_user = Some(vec!["syuu1228", "kakkun61", "methane", "tanakh"]);
+    // let muted_user = Some(None);
     let mut index: i32 = 0;
 
-    let last_mute = try!(mute_user.last().ok_or("".to_owned())).to_string();
-
-    for row in timeline {
-        if unread_filter == true && row.unread == false {
-            break;
+    for status in timeline {
+        if unread_filter == true && status.unread == false {
+            continue;
         }
-        for mute in mute_user.clone() {
-            if row.tweet.user.screen_name == mute {
+        for muted in muted_user.clone().unwrap() {
+            if status.tweet.user.screen_name == muted {
                 break;
-            } else if mute == last_mute {
+            } else if muted == muted_user.clone().unwrap().last().unwrap().to_string() {
                 let listboxrow = gtk::ListBoxRow::new();
-                let revealer = try!(create_revealer(row.clone()));
+                let revealer = try!(create_revealer(status.clone()));
                 listboxrow.add(&revealer);
                 listbox.insert(&listboxrow, index);
 
