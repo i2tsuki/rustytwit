@@ -50,6 +50,7 @@
 //! - `user_timeline`/`liked_by`
 
 extern crate chrono;
+use egg_mode;
 
 use rustc_serialize::json;
 // use regex::Regex;
@@ -57,7 +58,6 @@ use rustc_serialize::json;
 // use auth;
 // use links;
 // use user;
-use egg_mode::user;
 // use error;
 use egg_mode::error;
 // use error::Error::InvalidResponse;
@@ -72,7 +72,7 @@ use egg_mode::common::*;
 
 // pub use self::fun::*;
 
-use egg_mode::tweet::TweetEntities;
+// use egg_mode::tweet::TweetEntities;
 use egg_mode::tweet::TweetSource;
 use egg_mode::tweet::ExtendedTweetEntities;
 
@@ -91,7 +91,7 @@ pub struct Tweet {
     ///point indices where the "displayable" tweet text is.
     pub display_text_range: Option<(i32, i32)>,
     ///Link, hashtag, and user mention information extracted from the tweet text.
-    // pub entities: TweetEntities,
+    pub entities: TweetEntities,
     ///Extended media information attached to the tweet, if media is available.
     ///
     ///If a tweet has a photo, set of photos, gif, or video attached to it, this field will be
@@ -150,7 +150,7 @@ pub struct Tweet {
     ///full text is longer than 140 characters.
     pub truncated: bool,
     ///The user who posted this tweet.
-    pub user: Box<user::TwitterUser>,
+    pub user: Box<TwitterUser>,
     ///If present and `true`, indicates that this tweet has been withheld due to a DMCA complaint.
     pub withheld_copyright: bool,
     ///If present, contains two-letter country codes indicating where this tweet is being withheld.
@@ -219,5 +219,289 @@ fn current_user_retweet(input: &json::Json, field: &'static str) -> Result<Optio
     }
     else {
         Ok(None)
+    }
+}
+
+///Container for URL, hashtag, mention, and media information associated with a tweet.
+///
+///If a tweet has no hashtags, financial symbols ("cashtags"), links, or mentions, those respective
+///Vecs will be empty. If there is no media attached to the tweet, that field will be `None`.
+///
+///Note that for media attached to a tweet, this struct will only contain the first image of a
+///photo set, or a thumbnail of a video or GIF. Full media information is available in the tweet's
+///`extended_entities` field.
+#[derive(Debug)]
+pub struct TweetEntities {
+    ///Collection of hashtags parsed from the tweet.
+    pub hashtags: Vec<entities::HashtagEntity>,
+    ///Collection of financial symbols, or "cashtags", parsed from the tweet.
+    pub symbols: Vec<entities::HashtagEntity>,
+    ///Collection of URLs parsed from the tweet.
+    pub urls: Vec<entities::UrlEntity>,
+    ///Collection of user mentions parsed from the tweet.
+    pub user_mentions: Vec<entities::MentionEntity>,
+    ///If the tweet contains any attached media, this contains a collection of media information
+    ///from the tweet.
+    pub media: Option<Vec<entities::MediaEntity>>,
+}
+
+impl FromJson for TweetEntities {
+    fn from_json(input: &json::Json) -> Result<Self, error::Error> {
+        if !input.is_object() {
+            return Err(InvalidResponse("TweetEntities received json that wasn't an object", Some(input.to_string())));
+        }
+
+        Ok(TweetEntities {
+            hashtags: try!(field(input, "hashtags")),
+            symbols: try!(field(input, "symbols")),
+            urls: try!(field(input, "urls")),
+            user_mentions: try!(field(input, "user_mentions")),
+            media: field(input, "media").ok(),
+        })
+    }
+}
+
+// WIP for egg_mode::user
+#[derive(Debug)]
+pub struct TwitterUser {
+    ///Indicates this user has an account with "contributor mode" enabled, allowing
+    ///for Tweets issued by the user to be co-authored by another account. Rarely `true`.
+    pub contributors_enabled: bool,
+    ///The UTC timestamp for when this user account was created on Twitter.
+    pub created_at: chrono::DateTime<chrono::UTC>,
+    ///When true, indicates that this user has not altered the theme or background of
+    ///their user profile.
+    pub default_profile: bool,
+    ///When true, indicates that the user has not uploaded their own avatar and a default
+    ///egg avatar is used instead.
+    pub default_profile_image: bool,
+    ///The user-defined string describing their account.
+    pub description: Option<String>,
+    ///Link information that has been parsed out of the `url` or `description` fields given by the
+    ///user.
+    // pub entities: UserEntities,
+    ///The number of tweets this user has favorited or liked in the account's lifetime.
+    ///The term "favourites" and its British spelling are used for historical reasons.
+    pub favourites_count: i32,
+    ///When true, indicates that the authenticating user has issued a follow request to
+    ///this protected account.
+    pub follow_request_sent: Option<bool>,
+    ///Indicates whether the authenticating user is following this account. Deprecated
+    ///(and thus hidden) due to increasing error conditions where this returns None.
+    following: Option<bool>,
+    ///The number of followers this account has.
+    ///
+    ///In certain server-stress conditions, this may temporarily mistakenly return 0.
+    pub followers_count: i32,
+    ///The number of users this account follows, aka its "followings".
+    ///
+    ///In certain server-stress conditions, this may temporarily mistakenly return 0.
+    pub friends_count: i32,
+    ///Indicates whether this user as enabled their tweets to be geotagged.
+    ///
+    ///If this is set for the current user, then they can attach geographic data when
+    ///posting a new Tweet.
+    pub geo_enabled: bool,
+    ///Unique identifier for this user.
+    pub id: i64,
+    ///Indicates whether the user participates in Twitter's translator community.
+    pub is_translator: bool,
+    ///Language code for the user's self-declared interface language.
+    ///
+    ///Codes are formatted as a language tag from [BCP 47][]. Only indicates the user's
+    ///interface language, not necessarily the content of their Tweets.
+    ///
+    ///[BCP 47]: https://tools.ietf.org/html/bcp47
+    pub lang: String,
+    ///The number of public lists the user is a member of.
+    pub listed_count: i32,
+    ///The user-entered location field from their profile. Not necessarily parseable
+    ///or even a location.
+    pub location: Option<String>,
+    ///The user-entered display name.
+    pub name: String,
+    ///Indicates whether the authenticated user has chosen to received this user's tweets
+    ///via SMS. Deprecated (and thus hidden) due to bugs where this incorrectly returns
+    ///false.
+    notifications: Option<bool>,
+    ///The hex color chosen by the user for their profile background.
+    pub profile_background_color: String,
+    ///A URL pointing to the background image chosen by the user for their profile. Uses
+    ///HTTP as the protocol.
+    pub profile_background_image_url: Option<String>,
+    ///A URL pointing to the background image chosen by the user for their profile. Uses
+    ///HTTPS as the protocol.
+    pub profile_background_image_url_https: Option<String>,
+    ///Indicates whether the user's `profile_background_image_url` should be tiled when
+    ///displayed.
+    pub profile_background_tile: Option<bool>,
+    ///A URL pointing to the banner image chosen by the user. Uses HTTPS as the protocol.
+    ///
+    ///This is a base URL that a size specifier can be appended onto to get variously
+    ///sized images, with size specifiers according to [Profile Images and Banners][profile-img].
+    ///
+    ///[profile-img]: https://dev.twitter.com/overview/general/user-profile-images-and-banners
+    pub profile_banner_url: Option<String>,
+    ///A URL pointing to the user's avatar image. Uses HTTP as the protocol. Size
+    ///specifiers can be used according to [Profile Images and Banners][profile-img].
+    ///
+    ///[profile-img]: https://dev.twitter.com/overview/general/user-profile-images-and-banners
+    pub profile_image_url: String,
+    ///A URL pointing to the user's avatar image. Uses HTTPS as the protocol. Size
+    ///specifiers can be used according to [Profile Images and Banners][profile-img].
+    ///
+    ///[profile-img]: https://dev.twitter.com/overview/general/user-profile-images-and-banners
+    pub profile_image_url_https: String,
+    ///The hex color chosen by the user to display links in the Twitter UI.
+    pub profile_link_color: String,
+    ///The hex color chosen by the user to display sidebar borders in the Twitter UI.
+    pub profile_sidebar_border_color: String,
+    ///The hex color chosen by the user to display sidebar backgrounds in the Twitter UI.
+    pub profile_sidebar_fill_color: String,
+    ///The hex color chosen by the user to display text in the Twitter UI.
+    pub profile_text_color: String,
+    ///Indicates whether the user wants their uploaded background image to be used.
+    pub profile_use_background_image: bool,
+    ///Indicates whether the user is a [protected][] account.
+    ///
+    ///[protected]: https://support.twitter.com/articles/14016
+    pub protected: bool,
+    ///The screen name or handle identifying this user.
+    ///
+    ///Screen names are unique per-user but can be changed. Use `id` for an immutable identifier
+    ///for an account.
+    ///
+    ///Typically a maximum of 15 characters long, but older accounts may exist with longer screen
+    ///names.
+    pub screen_name: String,
+    ///Indicates that the user would like to see media inline. "Somewhat disused."
+    pub show_all_inline_media: Option<bool>,
+    ///If possible, the most recent tweet or retweet from this user.
+    ///
+    ///"In some circumstances, this data cannot be provided and this field will be omitted, null,
+    ///or empty." Do not depend on this field being filled. Also note that this is actually their
+    ///most-recent tweet, not the status pinned to their profile.
+    ///
+    ///"Perspectival" items within this tweet that depend on the authenticating user
+    ///[may not be completely reliable][stale-embed] in this embed.
+    ///
+    ///[stale-embed]: https://dev.twitter.com/docs/faq/basics/why-are-embedded-objects-stale-or-inaccurate
+    pub status: Option<Box<egg_mode::tweet::Tweet>>,
+    ///The number of tweets (including retweets) posted by this user.
+    pub statuses_count: i32,
+    ///The full name of the time zone the user has set their UI preference to.
+    pub time_zone: Option<String>,
+    ///The website link given by this user in their profile.
+    pub url: Option<String>,
+    ///The UTC offset of `time_zone` in minutes.
+    pub utc_offset: Option<i32>,
+    ///Indicates whether this user is a verified account.
+    pub verified: bool,
+    ///When present, lists the countries this user has been withheld from.
+    pub withheld_in_countries: Option<Vec<String>>,
+    ///When present, indicates whether the content being withheld is a "status" or "user".
+    pub withheld_scope: Option<String>,
+}
+
+///Container for URL entity information that may be paired with a user's profile.
+#[derive(Debug)]
+pub struct UserEntities {
+    ///URL information that has been parsed out of the user's `description`. If no URLs were
+    ///detected, then the contained Vec will be empty.
+    pub description: UserEntityDetail,
+    ///Link information for the user's `url`.
+    ///
+    ///If `url` is present on the user's profile, so will this field. Twitter validates the URL
+    ///entered to a user's profile when they save it, so this can be reasonably assumed to have URL
+    ///information if it's present.
+    pub url: Option<UserEntityDetail>,
+}
+
+///Represents a collection of URL entity information paired with a specific user profile field.
+#[derive(Debug)]
+pub struct UserEntityDetail {
+    ///Collection of URL entity information.
+    ///
+    ///There should be one of these per URL in the paired field. In the case of the user's
+    ///`description`, if no URLs are present, this field will still be present, but empty.
+    pub urls: Vec<entities::UrlEntity>,
+}
+
+impl FromJson for TwitterUser {
+    fn from_json(input: &json::Json) -> Result<Self, error::Error> {
+        if !input.is_object() {
+            return Err(InvalidResponse("TwitterUser received json that wasn't an object", Some(input.to_string())));
+        }
+        Ok(TwitterUser {
+            contributors_enabled: field(input, "contributors_enabled").unwrap_or(false),
+            created_at: try!(field(input, "created_at")),
+            default_profile: try!(field(input, "default_profile")),
+            default_profile_image: try!(field(input, "default_profile_image")),
+            description: field(input, "description").ok(),
+            // entities: try!(field(input, "entities")),
+            favourites_count: try!(field(input, "favourites_count")),
+            follow_request_sent: field(input, "follow_request_sent").ok(),
+            following: field(input, "following").ok(),
+            followers_count: try!(field(input, "followers_count")),
+            friends_count: try!(field(input, "friends_count")),
+            geo_enabled: try!(field(input, "geo_enabled")),
+            id: try!(field(input, "id")),
+            is_translator: try!(field(input, "is_translator")),
+            lang: try!(field(input, "lang")),
+            listed_count: try!(field(input, "listed_count")),
+            location: field(input, "location").ok(),
+            name: try!(field(input, "name")),
+            notifications: field(input, "notifications").ok(),
+            profile_background_color: try!(field(input, "profile_background_color")),
+            profile_background_image_url: field(input, "profile_background_image_url").ok(),
+            profile_background_image_url_https: field(input, "profile_background_image_url_https").ok(),
+            profile_background_tile: field(input, "profile_background_tile").ok(),
+            profile_banner_url: field(input, "profile_banner_url").ok(),
+            profile_image_url: try!(field(input, "profile_image_url")),
+            profile_image_url_https: try!(field(input, "profile_image_url_https")),
+            profile_link_color: try!(field(input, "profile_link_color")),
+            profile_sidebar_border_color: try!(field(input, "profile_sidebar_border_color")),
+            profile_sidebar_fill_color: try!(field(input, "profile_sidebar_fill_color")),
+            profile_text_color: try!(field(input, "profile_text_color")),
+            profile_use_background_image: try!(field(input, "profile_use_background_image")),
+            protected: try!(field(input, "protected")),
+            screen_name: try!(field(input, "screen_name")),
+            show_all_inline_media: field(input, "show_all_inline_media").ok(),
+            status: field(input, "status").map(Box::new).ok(),
+            statuses_count: try!(field(input, "statuses_count")),
+            time_zone: field(input, "time_zone").ok(),
+            url: field(input, "url").ok(),
+            utc_offset: field(input, "utc_offset").ok(),
+            verified: try!(field(input, "verified")),
+            withheld_in_countries: input.find("withheld_in_countries").and_then(|f| f.as_array())
+                                        .and_then(|arr| arr.iter().map(|x| x.as_string().map(|x| x.to_string()))
+                                                           .collect::<Option<Vec<String>>>()),
+            withheld_scope: field(input, "withheld_scope").ok(),
+        })
+    }
+}
+
+impl FromJson for UserEntities {
+    fn from_json(input: &json::Json) -> Result<Self, error::Error> {
+        if !input.is_object() {
+            return Err(InvalidResponse("UserEntities received json that wasn't an object", Some(input.to_string())));
+        }
+
+        Ok(UserEntities {
+            description: try!(field(input, "description")),
+            url: field(input, "url").ok(),
+        })
+    }
+}
+
+impl FromJson for UserEntityDetail {
+    fn from_json(input: &json::Json) -> Result<Self, error::Error> {
+        if !input.is_object() {
+            return Err(InvalidResponse("UserEntityDetail received json that wasn't an object", Some(input.to_string())));
+        }
+
+        Ok(UserEntityDetail {
+            urls: try!(field(input, "urls")),
+        })
     }
 }
