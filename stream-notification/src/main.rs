@@ -138,7 +138,7 @@ fn main() {
             },
             Err(_) => {
                 println!("resp_str: {}", resp_str);
-                println!("tweet is deleted");
+                // println!("tweet is deleted");
             },
         }
     }
