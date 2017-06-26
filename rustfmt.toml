@@ -1,4 +1,4 @@
-verbose = true
+verbose = false
 max_width = 120
 tab_spaces = 4
 newline_style = "Unix"
