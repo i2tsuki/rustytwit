@@ -1,8 +1,8 @@
-use self::crypto::digest::Digest;
-use self::crypto::sha2::Sha256;
-use self::hyper::Client;
-use self::hyper::net::HttpsConnector;
-use self::hyper_native_tls::NativeTlsClient;
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
+use hyper::Client;
+use hyper::net::HttpsConnector;
+use hyper_native_tls::NativeTlsClient;
 
 use std::env;
 use std::fs::File;
