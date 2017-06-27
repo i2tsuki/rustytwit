@@ -78,8 +78,8 @@ pub struct AccessKey {
 
 #[derive(Clone, Debug, RustcEncodable, RustcDecodable)]
 pub struct HomeTimeline {
-    pub last_update_id: Cell<i64>,
-    pub last_read_id: Cell<i64>,
+    pub last_update_id: Cell<u64>,
+    pub last_read_id: Cell<u64>,
     pub limits: Cell<usize>,
 }
 unsafe impl Sync for HomeTimeline {}
@@ -104,10 +104,12 @@ impl Config {
         try!(file.read_to_string(&mut body));
 
         let value = try!(toml::Value::from_str(body.as_ref()));
-        let toml = try!(toml::decode(value).ok_or("failed to decode toml value".to_owned()));
-        let filename = try!(filename.to_str()
-                .ok_or("failed to generalize filename path to string".to_owned()))
-            .to_string();
+        let toml = try!(toml::decode(value).ok_or(
+            "failed to decode toml value".to_owned(),
+        ));
+        let filename = try!(filename.to_str().ok_or(
+            "failed to generalize filename path to string".to_owned(),
+        )).to_string();
         let config: Config = Config {
             filename: filename,
             toml: toml,

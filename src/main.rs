@@ -1,3 +1,5 @@
+extern crate chrono;
+extern crate crypto;
 extern crate egg_mode;
 extern crate getopts;
 extern crate gdk_pixbuf;
@@ -5,6 +7,8 @@ extern crate gdk_pixbuf_sys;
 extern crate glib;
 extern crate gtk;
 extern crate gtk_sys;
+extern crate hyper;
+extern crate hyper_native_tls;
 extern crate regex;
 extern crate rustc_serialize;
 extern crate toml;
@@ -106,25 +110,29 @@ pub fn main() {
     let home_timeline = Arc::new(Mutex::new(home_timeline));
 
     // variable initialization
-    let consumer_token: egg_mode::Token = egg_mode::Token::new(::vars::CONSUMER_KEY, ::vars::CONSUMER_KEY_SECRET);
-    let consumer_token = Arc::new(consumer_token);
+    let consumer: egg_mode::KeyPair = egg_mode::KeyPair::new(::vars::CONSUMER_KEY, ::vars::CONSUMER_KEY_SECRET);
 
-    if config.toml.access_key.key == "" || config.toml.access_key.secret == "" {
-        let consumer_token = egg_mode::Token::new(::vars::CONSUMER_KEY, ::vars::CONSUMER_KEY_SECRET);
-        let access = match auth::authorize(consumer_token) {
-            Ok(access) => access,
-            Err(err) => {
-                error!("{:?}", err);
-                panic!("{:?}", err)
-            },
-        };
-        Arc::make_mut(&mut config).toml.access_key.key = access.key.into_owned();
-        Arc::make_mut(&mut config).toml.access_key.secret = access.secret.into_owned();
-    }
-    let access_token: egg_mode::Token = egg_mode::Token::new(config.toml.access_key.key.clone(),
-                                                             config.toml.access_key.secret.clone());
+    // if config.toml.access_key.key == "" || config.toml.access_key.secret == "" {
+    // let consumer = egg_mode::KeyPair::new(::vars::CONSUMER_KEY, ::vars::CONSUMER_KEY_SECRET);
+    // let token = match auth::authorize(consumer) {
+    //     Ok(access) => access,
+    //     Err(err) => {
+    //         error!("{:?}", err);
+    //         panic!("{:?}", err)
+    //     },
+    // };
+    // Arc::make_mut(&mut config).toml.access_key.key = token.access.access.key.into_owned();
+    // Arc::make_mut(&mut config).toml.access_key.secret = token.access.access.secret.into_owned();
+    // }
+    let access: egg_mode::KeyPair = egg_mode::KeyPair::new(
+        config.toml.access_key.key.clone(),
+        config.toml.access_key.secret.clone(),
+    );
 
-    let access_token = Arc::new(access_token);
+    let token = Arc::new(egg_mode::Token::Access {
+        consumer: consumer,
+        access: access,
+    });
 
     // gui initialization
     if gtk::init().is_err() {
@@ -142,7 +150,8 @@ pub fn main() {
     let toolbar = gtk::Toolbar::new();
     toolbar.set_style(gtk::ToolbarStyle::BothHoriz);
     match toolbar.get_style_context() {
-        Some(style_context) => style_context.add_class(gtk_sys::GTK_STYLE_CLASS_PRIMARY_TOOLBAR),
+        // Some(style_context) => style_context.add_class(GTK_STYLE_CLASS_PRIMARY_TOOLBAR as str),
+        Some(style_context) => style_context.add_class("primary-toolbar"),
         None => {
             error!("toolbar style_context is None");
             panic!("toolbar style_context is None");
@@ -338,29 +347,27 @@ pub fn main() {
     // event definition, when refresh_button is clicked
     {
         let listbox = listbox.clone();
-
         let config = config.clone();
-
-        let consumer_token = consumer_token.clone();
-        let access_token = access_token.clone();
-
         let home = home_timeline.clone();
+        let token = token.clone();
 
         refresh_button.connect_clicked(move |_| {
-            let ref consumer_token = *consumer_token.as_ref();
-            let ref access_token = *access_token.as_ref();
-            let home_timeline =
-                match timeline::home::home_timeline(consumer_token,
-                                                    access_token,
-                                                    Some(config.toml.home_timeline.last_update_id.get() as i64),
-                                                    config.toml.home_timeline.limits.get() as i32) {
-                    Ok(home_timeline) => (home_timeline),
-                    Err(_) => {
-                        std::process::exit(1);
-                    },
-                };
+            let home_timeline = match timeline::home::home_timeline(
+                token.as_ref(),
+                Some(config.toml.home_timeline.last_update_id.get() as u64),
+                config.toml.home_timeline.limits.get() as i32,
+            ) {
+                Ok(home_timeline) => (home_timeline),
+                Err(_) => {
+                    std::process::exit(1);
+                },
+            };
             match home_timeline.first() {
-                Some(status) => config.toml.home_timeline.last_update_id.set(status.tweet.id),
+                Some(status) => {
+                    config.toml.home_timeline.last_update_id.set(
+                        status.tweet.id,
+                    )
+                },
                 None => (),
             }
             // add tweets to home_timeline and update home_timeline
@@ -442,9 +449,9 @@ pub fn main() {
             unread_image.set_padding(vars::UNREAD_IMAGE_SIZE, vars::UNREAD_IMAGE_SIZE);
 
             // update config.toml.home_timeline.last_read_id
-            let id: i64 = match id_label.get_text() {
+            let id: u64 = match id_label.get_text() {
                 Some(id_str) => {
-                    match i64::from_str_radix(&id_str, 10) {
+                    match u64::from_str_radix(&id_str, 10) {
                         Ok(id) => id,
                         Err(err) => {
                             error!("{}", err);
@@ -498,31 +505,31 @@ pub fn main() {
     {
         // create threads send signal, update timeline
         let config = config.clone();
-
-        let consumer_token = consumer_token.clone();
-        let access_token = access_token.clone();
+        let token = token.clone();
 
         thread::spawn(move || {
-            let ref consumer_token = consumer_token.as_ref();
-            let ref access_token = access_token.as_ref();
             let retry_secs = 60;
             let duration = 600;
             loop {
-                let timeline =
-                    match timeline::home::home_timeline(consumer_token,
-                                                        access_token,
-                                                        Some(config.toml.home_timeline.last_update_id.get() as i64),
-                                                        config.toml.home_timeline.limits.get() as i32) {
-                        Ok(timeline) => timeline,
-                        Err(err) => {
-                            error!("{:?}", err);
-                            debug!("it will try it after {} seconds", retry_secs);
-                            thread::sleep(time::Duration::from_secs(retry_secs));
-                            continue;
-                        },
-                    };
+                let timeline = match timeline::home::home_timeline(
+                    token.as_ref(),
+                    Some(config.toml.home_timeline.last_update_id.get() as u64),
+                    config.toml.home_timeline.limits.get() as i32,
+                ) {
+                    Ok(timeline) => timeline,
+                    Err(err) => {
+                        error!("{:?}", err);
+                        debug!("it will try it after {} seconds", retry_secs);
+                        thread::sleep(time::Duration::from_secs(retry_secs));
+                        continue;
+                    },
+                };
                 match timeline.first() {
-                    Some(status) => config.toml.home_timeline.last_update_id.set(status.tweet.id),
+                    Some(status) => {
+                        config.toml.home_timeline.last_update_id.set(
+                            status.tweet.id,
+                        )
+                    },
                     None => (),
                 }
                 match tx.send(timeline.clone()) {

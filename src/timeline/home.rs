@@ -1,17 +1,14 @@
-extern crate chrono;
 extern crate curl;
 extern crate crypto;
 extern crate egg_mode;
 extern crate rustc_serialize;
 extern crate time;
 
-
 use gtk;
 use gtk::{Image, Label};
 use gtk::{Orientation, RevealerTransitionType};
 use gtk::prelude::*;
 use regex;
-
 use std::clone::Clone;
 
 // TimelineError
@@ -75,7 +72,7 @@ pub struct TimelineRow {
 #[derive(Clone, Debug, RustcEncodable, RustcDecodable)]
 pub struct Tweet {
     pub created_at: String,
-    pub id: i64,
+    pub id: u64,
     pub text: String,
     pub attr: String,
     pub user: User, // pub retweeted_status: RetweetedStatus,
@@ -101,11 +98,12 @@ pub fn fixup_home(timeline: &mut Vec<TimelineRow>, limit: usize) {
     }
 }
 
-pub fn update_home(listbox: &gtk::ListBox,
-                   timeline: &Vec<TimelineRow>,
-                   add: bool,
-                   unread_filter: bool)
-                   -> Result<(), TimelineError> {
+pub fn update_home(
+    listbox: &gtk::ListBox,
+    timeline: &Vec<TimelineRow>,
+    add: bool,
+    unread_filter: bool,
+) -> Result<(), TimelineError> {
     // When add flag is false, refresh all listboxrow
     if !add {
         for widget in listbox.get_children() {
@@ -113,8 +111,7 @@ pub fn update_home(listbox: &gtk::ListBox,
         }
     }
     // いっぱいつぶやくユーザをフィルタ
-    let muted_user = Some(vec!["syuu1228", "kakkun61", "methane", "tanakh"]);
-    // let muted_user = Some(None);
+    let muted_user = Some(None);
     let mut index: i32 = 0;
 
     for status in timeline {
@@ -175,11 +172,13 @@ pub fn create_revealer(row: TimelineRow) -> Result<gtk::Revealer, CreateWidgetEr
     };
 
     let create_box_revealer = move |row: TimelineRow| -> Result<gtk::Box, CreateWidgetError> {
-        let profile_image_filename = try!(::utils::get_profile_image(&row.tweet.user.profile_image_url));
+        println!("{}", &row.tweet.user.profile_image_url);
+        let profile_image_filename = try!(::utils::get_profile_image(
+            &row.tweet.user.profile_image_url,
+        ));
         let image_profile_image = Image::new_from_file(profile_image_filename);
         image_profile_image.set_padding(4, 4);
 
-        // let box_label = try!(create_box_label(row.tweet.clone()));
         let box_label = try!(create_box_label(row.tweet.clone()));
 
         let image_unread = Image::new_from_icon_name("gtk-media-record", 1);
@@ -273,7 +272,9 @@ pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, Creat
     };
 
     let create_expanded_box_revealer = move |row: TimelineRow| -> Result<gtk::Box, CreateWidgetError> {
-        let profile_image_filename = try!(::utils::get_profile_image(&row.tweet.user.profile_image_url));
+        let profile_image_filename = try!(::utils::get_profile_image(
+            &row.tweet.user.profile_image_url,
+        ));
         let image_profile_image = Image::new_from_file(profile_image_filename);
         image_profile_image.set_padding(4, 4);
 
@@ -335,43 +336,56 @@ pub fn create_expanded_revealer(row: TimelineRow) -> Result<gtk::Revealer, Creat
 
 pub fn show_listboxrow(listboxrow: &gtk::ListBoxRow) -> Result<(), gtk::Widget> {
     listboxrow.show_all();
-    let revealer = listboxrow.get_child().unwrap().downcast::<gtk::Revealer>().unwrap();
-    let listboxrow_box = revealer.get_child().unwrap().downcast::<gtk::Box>().unwrap();
+    let revealer = listboxrow
+        .get_child()
+        .unwrap()
+        .downcast::<gtk::Revealer>()
+        .unwrap();
+    let listboxrow_box = revealer
+        .get_child()
+        .unwrap()
+        .downcast::<gtk::Box>()
+        .unwrap();
     listboxrow_box.get_children()[4].hide();
     listboxrow_box.get_children()[5].hide();
     Ok(())
 }
 
-pub fn home_timeline(consumer_token: &egg_mode::Token,
-                     access_token: &egg_mode::Token,
-                     since_id: Option<i64>,
-                     count: i32)
-                     -> Result<Vec<TimelineRow>, egg_mode::error::Error> {
+pub fn home_timeline(
+    token: &egg_mode::Token,
+    since_id: Option<u64>,
+    count: i32,
+) -> Result<Vec<TimelineRow>, egg_mode::error::Error> {
     let mut timeline: Vec<TimelineRow> = Vec::new();
-    let home_timeline = egg_mode::tweet::home_timeline(&consumer_token, &access_token).with_page_size(count);
+    let home_timeline = egg_mode::tweet::home_timeline(&token).with_page_size(count);
     for status in &home_timeline.call(since_id, None).unwrap().response {
         let mut text = status.text.clone();
-        let mut attr = format!("@{}", status.user.screen_name);
+        let mut attr = format!("@{}", status.clone().user.unwrap().screen_name);
         if let Some(ref screen_name) = status.in_reply_to_screen_name {
-            attr = format!("@{} --> in reply to @{}",
-                           status.user.screen_name,
-                           screen_name);
+            attr = format!(
+                "@{} --> in reply to @{}",
+                status.clone().user.unwrap().screen_name,
+                screen_name
+            );
         }
         if let Some(ref retweeted_status) = status.retweeted_status {
             text = retweeted_status.text.clone();
-            attr = format!("@{} retweeted from @{}",
-                           status.user.screen_name,
-                           retweeted_status.user.screen_name);
+            attr = format!(
+                "@{} retweeted from @{}",
+                status.clone().user.unwrap().screen_name,
+                retweeted_status.clone().user.unwrap().screen_name
+            );
         }
+        let created_at_local = status.created_at.naive_local();
         timeline.push(TimelineRow {
             tweet: Tweet {
-                created_at: format!("{}", status.created_at.with_timezone(&chrono::Local)),
+                created_at: format!("{}", created_at_local),
                 id: status.id.clone(),
                 text: text,
                 attr: attr,
                 user: User {
-                    screen_name: status.user.screen_name.clone(),
-                    profile_image_url: status.user.profile_image_url.clone(),
+                    screen_name: status.clone().user.unwrap().screen_name.clone(),
+                    profile_image_url: status.clone().user.unwrap().profile_image_url.clone(),
                 },
             },
             unread: true,

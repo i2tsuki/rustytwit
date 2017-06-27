@@ -21,8 +21,8 @@ impl From<egg_mode::error::Error> for AuthError {
     }
 }
 
-pub fn authorize(consumer_token: egg_mode::Token) -> Result<egg_mode::Token<'static>, AuthError> {
-    let request_token = try!(egg_mode::request_token(&consumer_token, "rustytwit"));
+pub fn authorize(consumer: egg_mode::KeyPair<'static>) -> Result<egg_mode::Token<'static>, AuthError> {
+    let request_token = try!(egg_mode::request_token(&consumer, "rustytwit"));
     let url = egg_mode::authorize_url(&request_token);
 
     println!("access the following url: {}", url);
@@ -33,6 +33,6 @@ pub fn authorize(consumer_token: egg_mode::Token) -> Result<egg_mode::Token<'sta
     let pin = input.trim().to_string();
 
     // There are access_token, user_id, username receiving here
-    let (access_token, _, _) = try!(egg_mode::access_token(&consumer_token, &request_token, pin));
-    Ok(access_token)
+    let (token, _, _) = try!(egg_mode::access_token(consumer, &request_token, pin));
+    Ok(token)
 }

@@ -1,16 +1,15 @@
-extern crate curl;
-extern crate crypto;
-
 use self::crypto::digest::Digest;
 use self::crypto::sha2::Sha256;
+use self::hyper::Client;
+use self::hyper::net::HttpsConnector;
+use self::hyper_native_tls::NativeTlsClient;
 
-use self::curl::http;
 use std::env;
 use std::fs::File;
 use std::io;
+use std::io::Read;
 use std::io::prelude::*;
 
-// UtilsError
 #[derive(Debug)]
 pub enum UtilsError {
     Io(io::Error),
@@ -38,24 +37,30 @@ pub fn get_profile_image(profile_image_url: &String) -> Result<String, UtilsErro
         },
     };
 
-    let cache_dir = home_dir.clone().join(::vars::CACHE_DIR).join("rustytwit").join("images");
+    let cache_dir = home_dir
+        .clone()
+        .join(::vars::CACHE_DIR)
+        .join("rustytwit")
+        .join("images");
 
     let mut sha256 = Sha256::new();
     sha256.input_str(&profile_image_url);
 
+    let ssl = NativeTlsClient::new().unwrap();
+    let connector = HttpsConnector::new(ssl);
+    let client = Client::with_connector(connector);
+
     match File::open(cache_dir.join(sha256.result_str())) {
         Ok(_) => (),
         Err(_) => {
-            match http::handle().get(profile_image_url.as_str()).exec() {
-                Ok(resp) => {
-                    match resp.get_code() {
-                        200 => {
-                            try!(File::create(cache_dir.join(sha256.result_str()))?.write_all(resp.get_body()));
-                        },
-                        code => {
-                            return Err(UtilsError::String(format!("response status is {}", code)));
-                        },
-                    }
+            match client.get(profile_image_url).send() {
+                Ok(mut resp) => {
+                    let mut body = vec![];
+                    resp.read_to_end(&mut body).unwrap();
+                    try!(
+                        File::create(cache_dir.join(sha256.result_str()))?
+                            .write_all(&body)
+                    );
                 },
                 Err(err) => {
                     return Err(UtilsError::String(format!("{:?}", err)));
